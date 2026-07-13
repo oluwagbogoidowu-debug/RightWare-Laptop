@@ -123,10 +123,12 @@ export default function App() {
               
               {/* Left Column: Typography & CTAs */}
               <div className="lg:col-span-7 space-y-6 sm:space-y-8 max-w-2xl">
-                <div className="inline-flex items-center space-x-2 bg-white border border-[#E5E5E5] px-2.5 py-1">
+                <div className="inline-flex items-center space-x-2.5 bg-white border border-[#E5E5E5] px-3 py-1.5 shadow-sm">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#FF3B30] animate-pulse" />
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-[#111111] font-bold">
-                    PREMIUM USED LAPTOPS ONLY
+                  <span className="font-mono text-[10px] uppercase tracking-widest font-bold flex flex-wrap items-center gap-2">
+                    <span className="text-[#FF3B30]">VERIFIED STOCK</span>
+                    <span className="text-neutral-300 font-normal">•</span>
+                    <span className="text-[#111111]">PREMIUM USED LAPTOPS ONLY</span>
                   </span>
                 </div>
 

@@ -140,7 +140,7 @@ export default function ProductSection({
               <div
                 key={laptop.id}
                 onClick={() => onSelectLaptop(laptop)}
-                className="group bg-white border border-[#E5E5E5] p-3 flex flex-col justify-between hover:border-[#111111] transition-all duration-300 cursor-pointer relative"
+                className="group bg-white border border-[#E5E5E5] p-3 flex flex-col justify-between hover:border-[#111111] hover:-translate-y-1.5 hover:shadow-[0_12px_24px_-10px_rgba(0,0,0,0.08)] transition-all duration-300 ease-out cursor-pointer relative"
               >
                 <div>
                   {/* Laptop Visual Card Container */}
@@ -149,7 +149,7 @@ export default function ProductSection({
                       src={laptop.image}
                       alt={laptop.name}
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300 filter grayscale-[0.1]"
+                      className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out filter grayscale-[0.1]"
                     />
 
                     {/* Highly Controlled Red Urgency Tag (Low Stock) */}

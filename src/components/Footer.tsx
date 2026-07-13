@@ -1,5 +1,6 @@
 import React from 'react';
 import { Laptop, Phone, Mail, MapPin, ShieldAlert, CheckCircle } from 'lucide-react';
+import logo from '../../assets/logo.png';
 
 export default function Footer() {
   return (
@@ -8,13 +9,12 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-8">
           {/* Brand Col */}
           <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <div className="bg-[#FF3B30] p-1.5 rounded-sm flex items-center justify-center">
-                <Laptop className="h-4 w-4 text-white" />
-              </div>
-              <span className="font-display font-bold text-lg tracking-tight text-white">
-                RELIABLE<span className="text-[#FF3B30]">.</span>
-              </span>
+            <div className="flex items-center">
+              <img 
+                src={logo} 
+                alt="Store Logo" 
+                className="h-10 sm:h-12 w-auto object-contain filter invert opacity-90"
+              />
             </div>
             <p className="font-sans text-xs text-[#999999] leading-relaxed">
               Premium tested fairly used laptops. We believe tech should be transparent, durable, and affordable.
