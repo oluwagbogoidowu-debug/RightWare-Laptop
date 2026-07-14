@@ -1,6 +1,6 @@
 import React from 'react';
 import { Laptop, Phone, Mail, MapPin, ShieldAlert, CheckCircle } from 'lucide-react';
-import logo from '../../assets/logo1.png';
+import logo from '../../assets/logo.png';
 
 export default function Footer() {
   return (

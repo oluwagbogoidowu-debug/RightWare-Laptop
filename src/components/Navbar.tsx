@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Menu, X, MapPin, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import logo from '../../assets/logo1.png';
+import logo from '../../assets/logo.png';
 
 interface NavbarProps {
   onScrollToLaptops: () => void;
