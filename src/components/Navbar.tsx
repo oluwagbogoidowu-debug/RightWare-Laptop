@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Menu, X, MapPin, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import logo from '../../assets/logo1.png';
 
 interface NavbarProps {
   onScrollToLaptops: () => void;
@@ -27,7 +28,7 @@ export default function Navbar({ onScrollToLaptops, availableCount }: NavbarProp
         {/* Centered Brand Logo */}
         <div className="flex items-center justify-center flex-grow">
           <img 
-            src="/logo.png" 
+            src={logo} 
             alt="Store Logo" 
             className="h-14 sm:h-18 w-auto object-contain"
           />
@@ -71,7 +72,7 @@ export default function Navbar({ onScrollToLaptops, availableCount }: NavbarProp
               {/* Header inside drawer */}
               <div className="p-6 border-b border-[#E5E5E5] flex items-center justify-between">
                 <img 
-                  src="/logo.png" 
+                  src={logo} 
                   alt="Store Logo" 
                   className="h-10 w-auto object-contain"
                 />

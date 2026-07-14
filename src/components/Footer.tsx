@@ -1,5 +1,6 @@
 import React from 'react';
 import { Laptop, Phone, Mail, MapPin, ShieldAlert, CheckCircle } from 'lucide-react';
+import logo from '../../assets/logo1.png';
 
 export default function Footer() {
   return (
@@ -10,7 +11,7 @@ export default function Footer() {
           <div className="space-y-4">
             <div className="flex items-center">
               <img 
-                src="/logo.png" 
+                src={logo} 
                 alt="Store Logo" 
                 className="h-10 sm:h-12 w-auto object-contain filter invert opacity-90"
               />
