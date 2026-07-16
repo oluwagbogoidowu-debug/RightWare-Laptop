@@ -27,6 +27,7 @@ export interface Laptop {
   serialNumber: string;
   inspectionPassed: boolean;
   isSold?: boolean;
+  isForSale?: boolean;
   buyerFeedback?: string;
   buyerName?: string;
   deliveredDate?: string;

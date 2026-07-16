@@ -1,8 +1,13 @@
 import React from 'react';
+import { Laptop } from '../types';
 import { SOLD_LAPTOPS } from '../data';
 import { ShieldCheck, Truck, MessageSquare } from 'lucide-react';
 
-export default function RecentlyDelivered() {
+interface RecentlyDeliveredProps {
+  soldLaptops?: Laptop[];
+}
+
+export default function RecentlyDelivered({ soldLaptops = SOLD_LAPTOPS }: RecentlyDeliveredProps) {
   return (
     <section id="recently-delivered" className="py-16 sm:py-24 bg-white border-t border-[#E5E5E5]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -19,7 +24,7 @@ export default function RecentlyDelivered() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {SOLD_LAPTOPS.map((laptop) => (
+          {soldLaptops.map((laptop) => (
             <div 
               key={laptop.id} 
               className="group flex flex-col justify-between bg-[#F7F7F7] border border-[#E5E5E5] p-4 relative"

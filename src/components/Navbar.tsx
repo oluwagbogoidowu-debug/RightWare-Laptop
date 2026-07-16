@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Menu, X, MapPin, Clock } from 'lucide-react';
+import { Menu, X, MapPin, Clock, Laptop } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import logo from '../../assets/logo.png';
 
 interface NavbarProps {
   onScrollToLaptops: () => void;
@@ -26,12 +25,11 @@ export default function Navbar({ onScrollToLaptops, availableCount }: NavbarProp
         <div className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 opacity-0 pointer-events-none" />
 
         {/* Centered Brand Logo */}
-        <div className="flex items-center justify-center flex-grow">
-          <img 
-            src={logo} 
-            alt="Store Logo" 
-            className="h-14 sm:h-18 w-auto object-contain"
-          />
+        <div className="flex items-center justify-center flex-grow gap-2 sm:gap-2.5">
+          <Laptop className="h-6 w-6 sm:h-7 sm:w-7 text-[#FF3B30] flex-shrink-0" />
+          <span className="font-display text-xl sm:text-2xl font-extrabold tracking-tight text-[#111111]">
+            Rightware Laptop
+          </span>
         </div>
 
         {/* Interactive Menu Icon on the Right Hand Side */}
@@ -71,11 +69,12 @@ export default function Navbar({ onScrollToLaptops, availableCount }: NavbarProp
             >
               {/* Header inside drawer */}
               <div className="p-6 border-b border-[#E5E5E5] flex items-center justify-between">
-                <img 
-                  src={logo} 
-                  alt="Store Logo" 
-                  className="h-10 w-auto object-contain"
-                />
+                <div className="flex items-center gap-2">
+                  <Laptop className="h-5 w-5 text-[#FF3B30] flex-shrink-0" />
+                  <span className="font-display text-lg font-bold tracking-tight text-[#111111]">
+                    Rightware Laptop
+                  </span>
+                </div>
                 <button 
                   id="menu-close-btn"
                   onClick={() => setMenuOpen(false)}

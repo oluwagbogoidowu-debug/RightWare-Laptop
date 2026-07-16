@@ -1,6 +1,5 @@
 import React from 'react';
 import { Laptop, Phone, Mail, MapPin, ShieldAlert, CheckCircle } from 'lucide-react';
-import logo from '../../assets/logo.png';
 
 export default function Footer() {
   return (
@@ -9,12 +8,11 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-8">
           {/* Brand Col */}
           <div className="space-y-4">
-            <div className="flex items-center">
-              <img 
-                src={logo} 
-                alt="Store Logo" 
-                className="h-10 sm:h-12 w-auto object-contain filter invert opacity-90"
-              />
+            <div className="flex items-center gap-2">
+              <Laptop className="h-5 w-5 text-[#FF3B30] flex-shrink-0" />
+              <span className="font-display text-lg font-bold tracking-tight text-white">
+                Rightware Laptop
+              </span>
             </div>
             <p className="font-sans text-xs text-[#999999] leading-relaxed">
               Premium tested fairly used laptops. We believe tech should be transparent, durable, and affordable.
@@ -39,11 +37,11 @@ export default function Footer() {
               </li>
               <li className="flex items-center space-x-2.5">
                 <Phone className="h-4 w-4 text-[#FF3B30] flex-shrink-0" />
-                <span>+234 812 345 6789</span>
+                <span>+234 807 655 1802</span>
               </li>
               <li className="flex items-center space-x-2.5">
                 <Mail className="h-4 w-4 text-[#FF3B30] flex-shrink-0" />
-                <span>sales@reliablelaptops.com</span>
+                <span>sales@rightwarelaptops.com</span>
               </li>
             </ul>
           </div>
@@ -89,13 +87,15 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-[#333333] mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between font-sans text-xs text-[#666666]">
-          <p>© 2026 Reliable Laptops. All rights reserved. Premium Verified Stock.</p>
+          <p>© 2026 Rightware Laptops. All rights reserved. Premium Verified Stock.</p>
           <div className="flex space-x-6 mt-4 sm:mt-0 font-mono text-[10px]">
             <span className="hover:text-white transition-colors">Sourced Responsibly</span>
             <span className="text-[#FF3B30]">•</span>
             <span className="hover:text-white transition-colors">Price Match Verified</span>
             <span className="text-[#FF3B30]">•</span>
             <span className="hover:text-white transition-colors">Testing Standard v4.5</span>
+            <span className="text-[#FF3B30]">•</span>
+            <a href="#admin" className="hover:text-white transition-colors text-neutral-400 font-bold border border-dashed border-[#FF3B30]/30 px-1.5 py-0.5">Staff Portal</a>
           </div>
         </div>
       </div>

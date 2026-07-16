@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Laptop, FilterState, FilterBudget, FilterBrand, FilterUse } from './types';
-import { ACTIVE_LAPTOPS } from './data';
+import { ACTIVE_LAPTOPS, SOLD_LAPTOPS } from './data';
 import { ChevronRight, ArrowUpRight, Battery, Shield, CheckCircle2, MessageSquare, PhoneCall } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -14,8 +14,74 @@ import Testimonials from './components/Testimonials';
 import RecentlyDelivered from './components/RecentlyDelivered';
 import Footer from './components/Footer';
 import LaptopDetailsModal from './components/LaptopDetailsModal';
+import AdminPanel from './components/AdminPanel';
 
 export default function App() {
+  // Load laptops state from localStorage, fallback to ACTIVE_LAPTOPS
+  const [laptops, setLaptops] = useState<Laptop[]>(() => {
+    const saved = localStorage.getItem('rightware_active_laptops');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return ACTIVE_LAPTOPS;
+  });
+
+  // Load sold laptops state from localStorage, fallback to SOLD_LAPTOPS
+  const [soldLaptops, setSoldLaptops] = useState<Laptop[]>(() => {
+    const saved = localStorage.getItem('rightware_sold_laptops');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return SOLD_LAPTOPS;
+  });
+
+  // Check if we are in admin view (either /admin pathname or #admin hash)
+  const [isAdminView, setIsAdminView] = useState(() => {
+    return window.location.pathname === '/admin' || window.location.hash === '#admin';
+  });
+
+  // Monitor location changes for routing
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setIsAdminView(window.location.pathname === '/admin' || window.location.hash === '#admin');
+    };
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
+  }, []);
+
+  const handleUpdateLaptops = (updatedLaptops: Laptop[]) => {
+    setLaptops(updatedLaptops);
+    localStorage.setItem('rightware_active_laptops', JSON.stringify(updatedLaptops));
+  };
+
+  const handleUpdateSoldLaptops = (updatedSold: Laptop[]) => {
+    setSoldLaptops(updatedSold);
+    localStorage.setItem('rightware_sold_laptops', JSON.stringify(updatedSold));
+  };
+
+  const handleCloseAdmin = () => {
+    if (window.location.hash === '#admin') {
+      window.location.hash = '';
+    } else if (window.location.pathname === '/admin') {
+      window.history.pushState(null, '', '/');
+      setIsAdminView(false);
+    } else {
+      setIsAdminView(false);
+    }
+  };
+
   // Active selected laptop for modal detail inspection
   const [selectedLaptop, setSelectedLaptop] = useState<Laptop | null>(null);
 
@@ -68,7 +134,12 @@ export default function App() {
 
   // Calculate matching laptops dynamically
   const filteredLaptops = useMemo(() => {
-    return ACTIVE_LAPTOPS.filter((laptop) => {
+    return laptops.filter((laptop) => {
+      // Hide listings that are explicitly unlisted by the admin
+      if (laptop.isForSale === false) {
+        return false;
+      }
+
       // 1. Brand match
       if (filters.brand !== 'all' && laptop.brand !== filters.brand) {
         return false;
@@ -102,7 +173,19 @@ export default function App() {
 
       return true;
     });
-  }, [filters]);
+  }, [laptops, filters]);
+
+  if (isAdminView) {
+    return (
+      <AdminPanel
+        laptops={laptops}
+        soldLaptops={soldLaptops}
+        onUpdateLaptops={handleUpdateLaptops}
+        onUpdateSoldLaptops={handleUpdateSoldLaptops}
+        onClose={handleCloseAdmin}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F7F7F7] text-[#111111] font-sans selection:bg-[#FF3B30] selection:text-white flex flex-col justify-between">
@@ -110,7 +193,7 @@ export default function App() {
       {/* Top sticky brand header */}
       <Navbar 
         onScrollToLaptops={() => scrollToId('available-laptops')} 
-        availableCount={ACTIVE_LAPTOPS.length}
+        availableCount={laptops.filter(l => l.isForSale !== false).length}
       />
 
       {/* Main Container */}
@@ -123,21 +206,22 @@ export default function App() {
               
               {/* Left Column: Typography & CTAs */}
               <div className="lg:col-span-7 space-y-6 sm:space-y-8 max-w-2xl">
-                <div className="inline-flex items-center space-x-2.5 bg-white border border-[#E5E5E5] px-3 py-1.5 shadow-sm">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#FF3B30] animate-pulse" />
-                  <span className="font-mono text-[10px] uppercase tracking-widest font-bold flex flex-wrap items-center gap-2">
-                    <span className="text-[#FF3B30]">VERIFIED STOCK</span>
-                    <span className="text-neutral-300 font-normal">•</span>
-                    <span className="text-[#111111]">PREMIUM USED LAPTOPS ONLY</span>
-                  </span>
-                </div>
-
                 <div className="space-y-4">
                   <h1 className="font-display font-extrabold text-4xl sm:text-5xl lg:text-6xl text-[#111111] leading-[1.1] tracking-tight">
                     Clean, reliable <br className="hidden sm:inline" />
                     fairly used laptops
                   </h1>
-                  <p className="font-sans text-sm sm:text-base text-[#6B6B6B] leading-relaxed max-w-lg">
+
+                  <div className="inline-flex items-center space-x-2.5 bg-white border border-[#E5E5E5] px-3 py-1.5 shadow-sm">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#FF3B30] animate-pulse" />
+                    <span className="font-mono text-[10px] uppercase tracking-widest font-bold flex flex-wrap items-center gap-2">
+                      <span className="text-[#FF3B30]">VERIFIED STOCK</span>
+                      <span className="text-neutral-300 font-normal">•</span>
+                      <span className="text-[#111111]">PREMIUM USED LAPTOPS ONLY</span>
+                    </span>
+                  </div>
+
+                  <p className="font-sans text-sm sm:text-base text-[#6B6B6B] leading-relaxed max-w-lg pt-1">
                     Tested. Verified. Ready to use. Every single workstation is backed by our strict 45-point engineer audit and a documented battery report.
                   </p>
                 </div>
@@ -237,7 +321,7 @@ export default function App() {
         <HowItWorks />
 
         {/* Recently Sold Units (with Sold overlay and feedback) */}
-        <RecentlyDelivered />
+        <RecentlyDelivered soldLaptops={soldLaptops} />
 
         {/* Short trustworthy reviews block */}
         <Testimonials />
@@ -271,7 +355,7 @@ export default function App() {
               </button>
 
               <a
-                href="https://wa.me/2348123456789"
+                href="https://wa.me/2348076551802"
                 target="_blank"
                 rel="noreferrer"
                 className="bg-transparent hover:bg-white/5 active:bg-transparent text-white border border-[#333333] hover:border-[#FF3B30] font-sans text-xs sm:text-sm font-semibold px-8 py-3.5 transition-colors cursor-pointer flex items-center space-x-2.5 w-full sm:w-auto justify-center"
