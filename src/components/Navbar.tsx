@@ -5,16 +5,33 @@ import { motion, AnimatePresence } from 'motion/react';
 interface NavbarProps {
   onScrollToLaptops: () => void;
   availableCount: number;
+  onTabChange?: (tab: 'home' | 'shop') => void;
 }
 
-export default function Navbar({ onScrollToLaptops, availableCount }: NavbarProps) {
+export default function Navbar({ onScrollToLaptops, availableCount, onTabChange }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleScrollClick = () => {
     setMenuOpen(false);
+    if (onTabChange) {
+      onTabChange('shop');
+    }
     // Allow animation to complete or start before scrolling
     setTimeout(() => {
       onScrollToLaptops();
+    }, 150);
+  };
+
+  const handleAnchorClick = (tab: 'home' | 'shop', id: string) => {
+    setMenuOpen(false);
+    if (onTabChange) {
+      onTabChange(tab);
+    }
+    setTimeout(() => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
     }, 150);
   };
 
@@ -98,32 +115,29 @@ export default function Navbar({ onScrollToLaptops, availableCount }: NavbarProp
                   </span>
                 </button>
 
-                <a 
+                <button 
                   id="menu-link-standard"
-                  href="#how-it-works" 
-                  onClick={() => setMenuOpen(false)}
-                  className="block py-4 px-3 border-b border-[#F2F2F2] text-lg font-sans font-semibold text-[#111111] hover:text-[#FF3B30] hover:bg-[#F9F9F9] transition-all rounded-sm"
+                  onClick={() => handleAnchorClick('home', 'how-it-works')}
+                  className="w-full text-left py-4 px-3 border-b border-[#F2F2F2] text-lg font-sans font-semibold text-[#111111] hover:text-[#FF3B30] hover:bg-[#F9F9F9] transition-all rounded-sm cursor-pointer"
                 >
                   Our Standard
-                </a>
+                </button>
 
-                <a 
+                <button 
                   id="menu-link-recently"
-                  href="#recently-delivered" 
-                  onClick={() => setMenuOpen(false)}
-                  className="block py-4 px-3 border-b border-[#F2F2F2] text-lg font-sans font-semibold text-[#111111] hover:text-[#FF3B30] hover:bg-[#F9F9F9] transition-all rounded-sm"
+                  onClick={() => handleAnchorClick('home', 'recently-delivered')}
+                  className="w-full text-left py-4 px-3 border-b border-[#F2F2F2] text-lg font-sans font-semibold text-[#111111] hover:text-[#FF3B30] hover:bg-[#F9F9F9] transition-all rounded-sm cursor-pointer"
                 >
                   Recently Delivered
-                </a>
+                </button>
 
-                <a 
+                <button 
                   id="menu-link-testimonials"
-                  href="#testimonials" 
-                  onClick={() => setMenuOpen(false)}
-                  className="block py-4 px-3 border-b border-[#F2F2F2] text-lg font-sans font-semibold text-[#111111] hover:text-[#FF3B30] hover:bg-[#F9F9F9] transition-all rounded-sm"
+                  onClick={() => handleAnchorClick('home', 'testimonials')}
+                  className="w-full text-left py-4 px-3 border-b border-[#F2F2F2] text-[#111111] text-lg font-sans font-semibold hover:text-[#FF3B30] hover:bg-[#F9F9F9] transition-all rounded-sm cursor-pointer"
                 >
                   Reviews
-                </a>
+                </button>
               </div>
 
               {/* Footer inside Drawer (Lagos Store & Shipping Details) */}
