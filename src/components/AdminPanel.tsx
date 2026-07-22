@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Laptop, LaptopCondition, LaptopSpecs } from '../types';
+import { saveLaptopToFirestore, deleteLaptopFromFirestore } from '../lib/firebaseService';
 import { 
   Plus, 
   Trash2, 
@@ -70,6 +71,7 @@ export default function AdminPanel({
 
   // Success Notification
   const [notification, setNotification] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,12 +97,14 @@ export default function AdminPanel({
   };
 
   // Add a new laptop listing
-  const handleAddLaptop = (e: React.FormEvent) => {
+  const handleAddLaptop = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName || !formCpu || !formSerial) {
       triggerNotification('Please fill in Model Name, CPU, and Serial Number!');
       return;
     }
+
+    setIsSubmitting(true);
 
     const defaultImages = {
       Apple: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=800&q=80',
@@ -138,18 +142,26 @@ export default function AdminPanel({
       isForSale: formForSale
     };
 
-    const updated = [newLaptop, ...laptops];
-    onUpdateLaptops(updated);
-    triggerNotification(`Successfully added listing: ${formName}`);
-    
-    // Reset Form Fields
-    setFormName('');
-    setFormCpu('');
-    setFormSerial('');
-    setFormDescription('');
-    setFormImage('');
-    setFormStock(1);
-    setActiveTab('inventory');
+    try {
+      await saveLaptopToFirestore(newLaptop);
+      const updated = [newLaptop, ...laptops];
+      onUpdateLaptops(updated);
+      triggerNotification(`Successfully stored in database & launched listing: ${formName}`);
+      
+      // Reset Form Fields
+      setFormName('');
+      setFormCpu('');
+      setFormSerial('');
+      setFormDescription('');
+      setFormImage('');
+      setFormStock(1);
+      setActiveTab('inventory');
+    } catch (error) {
+      console.error('Error storing laptop in database:', error);
+      triggerNotification('Failed to save listing to database. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Delete a laptop listing
@@ -157,6 +169,7 @@ export default function AdminPanel({
     if (confirm('Are you sure you want to permanently delete this listing?')) {
       const updated = laptops.filter(l => l.id !== id);
       onUpdateLaptops(updated);
+      deleteLaptopFromFirestore(id).catch(console.error);
       triggerNotification('Listing deleted successfully.');
     }
   };
@@ -166,7 +179,9 @@ export default function AdminPanel({
     const updated = laptops.map(laptop => {
       if (laptop.id === id) {
         const nextVal = laptop.isForSale === false ? true : false;
-        return { ...laptop, isForSale: nextVal };
+        const updatedItem = { ...laptop, isForSale: nextVal };
+        saveLaptopToFirestore(updatedItem).catch(console.error);
+        return updatedItem;
       }
       return laptop;
     });
@@ -179,7 +194,9 @@ export default function AdminPanel({
     const val = Math.max(0, newStock);
     const updated = laptops.map(laptop => {
       if (laptop.id === id) {
-        return { ...laptop, stockCount: val };
+        const updatedItem = { ...laptop, stockCount: val };
+        saveLaptopToFirestore(updatedItem).catch(console.error);
+        return updatedItem;
       }
       return laptop;
     });
@@ -860,10 +877,11 @@ export default function AdminPanel({
             <div className="pt-4 border-t border-[#E5E5E5] flex justify-end">
               <button
                 type="submit"
-                className="bg-[#FF3B30] hover:bg-[#FF3B30]/90 active:bg-[#FF3B30] text-white font-sans text-xs font-bold px-8 py-3.5 transition-colors cursor-pointer flex items-center space-x-2"
+                disabled={isSubmitting}
+                className="bg-[#FF3B30] hover:bg-[#FF3B30]/90 active:bg-[#FF3B30] disabled:bg-neutral-400 text-white font-sans text-xs font-bold px-8 py-3.5 transition-colors cursor-pointer disabled:cursor-not-allowed flex items-center space-x-2"
               >
                 <Plus className="h-4 w-4" />
-                <span>Verify & Launch Listing</span>
+                <span>{isSubmitting ? 'Saving to Database...' : 'Verify & Store in Database'}</span>
               </button>
             </div>
           </form>

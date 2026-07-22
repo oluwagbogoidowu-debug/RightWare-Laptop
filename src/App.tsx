@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Laptop, FilterState, FilterBudget, FilterBrand, FilterUse } from './types';
 import { ACTIVE_LAPTOPS, SOLD_LAPTOPS } from './data';
+import { seedInitialDataIfNeeded, subscribeLaptops } from './lib/firebaseService';
 import { ChevronRight, ArrowUpRight, Battery, Shield, CheckCircle2, MessageSquare, PhoneCall, Home, ShoppingBag } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -17,31 +18,26 @@ import LaptopDetailsModal from './components/LaptopDetailsModal';
 import AdminPanel from './components/AdminPanel';
 
 export default function App() {
-  // Load laptops state from localStorage, fallback to ACTIVE_LAPTOPS
-  const [laptops, setLaptops] = useState<Laptop[]>(() => {
-    const saved = localStorage.getItem('rightware_active_laptops');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return ACTIVE_LAPTOPS;
-  });
+  const [laptops, setLaptops] = useState<Laptop[]>(ACTIVE_LAPTOPS);
+  const [soldLaptops, setSoldLaptops] = useState<Laptop[]>(SOLD_LAPTOPS);
 
-  // Load sold laptops state from localStorage, fallback to SOLD_LAPTOPS
-  const [soldLaptops, setSoldLaptops] = useState<Laptop[]>(() => {
-    const saved = localStorage.getItem('rightware_sold_laptops');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
+  // Initialize and subscribe to Firestore
+  useEffect(() => {
+    // Seed initial data if empty
+    seedInitialDataIfNeeded();
+
+    // Subscribe to real-time changes
+    const unsubscribe = subscribeLaptops((allLaptops) => {
+      if (allLaptops.length > 0) {
+        const active = allLaptops.filter((item) => !item.isSold);
+        const sold = allLaptops.filter((item) => item.isSold);
+        setLaptops(active);
+        setSoldLaptops(sold);
       }
-    }
-    return SOLD_LAPTOPS;
-  });
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Check if we are in admin view (either /admin pathname or #admin hash)
   const [isAdminView, setIsAdminView] = useState(() => {
@@ -137,7 +133,7 @@ export default function App() {
 
   // Calculate matching laptops dynamically
   const filteredLaptops = useMemo(() => {
-    return laptops.filter((laptop) => {
+    const filterFn = (laptop: Laptop) => {
       // Hide listings that are explicitly unlisted by the admin
       if (laptop.isForSale === false) {
         return false;
@@ -175,8 +171,17 @@ export default function App() {
       }
 
       return true;
-    });
-  }, [laptops, filters]);
+    };
+
+    const activeFiltered = laptops.filter(filterFn);
+    const soldFiltered = soldLaptops.filter(filterFn);
+
+    // Prioritize available listings first, then sold-out ones in between
+    const availableActive = activeFiltered.filter((l) => l.stockCount > 0 && !l.isSold);
+    const soldOutActive = activeFiltered.filter((l) => l.stockCount === 0 || l.isSold);
+
+    return [...availableActive, ...soldOutActive, ...soldFiltered];
+  }, [laptops, soldLaptops, filters]);
 
   if (isAdminView) {
     return (
@@ -218,21 +223,28 @@ export default function App() {
                   <div className="lg:col-span-7 space-y-6 sm:space-y-8 max-w-2xl">
                     <div className="space-y-4">
                       <h1 className="font-display font-extrabold text-4xl sm:text-5xl lg:text-6xl text-[#111111] leading-[1.1] tracking-tight">
-                        Clean, reliable <br className="hidden sm:inline" />
-                        fairly used laptops
+                        Get a clean, reliable <br className="hidden sm:inline" />
+                        fairly used laptops <br className="hidden sm:inline" />
+                        for your <span className="text-neutral-400">everyday need.</span>
                       </h1>
 
-                      <div className="inline-flex items-center space-x-2.5 bg-white border border-[#E5E5E5] px-3 py-1.5 shadow-sm">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#FF3B30] animate-pulse" />
-                        <span className="font-mono text-[10px] uppercase tracking-widest font-bold flex flex-wrap items-center gap-2">
-                          <span className="text-[#FF3B30]">VERIFIED STOCK</span>
-                          <span className="text-neutral-300 font-normal">•</span>
-                          <span className="text-[#111111]">PREMIUM USED LAPTOPS ONLY</span>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-2.5 py-1 text-[10px] sm:text-xs font-mono font-bold text-[#111111] shadow-xs">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#FF3B30] mr-1.5" />
+                          Tested
+                        </span>
+                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-2.5 py-1 text-[10px] sm:text-xs font-mono font-bold text-[#111111] shadow-xs">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#FF3B30] mr-1.5" />
+                          Verified
+                        </span>
+                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-2.5 py-1 text-[10px] sm:text-xs font-mono font-bold text-[#111111] shadow-xs">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#FF3B30] mr-1.5" />
+                          Ready to use
                         </span>
                       </div>
 
                       <p className="font-sans text-sm sm:text-base text-[#6B6B6B] leading-relaxed max-w-lg pt-1">
-                        Tested. Verified. Ready to use. Every single workstation is backed by our strict 45-point engineer audit and a documented battery report.
+                        Every single workstation is backed by our strict 45-point engineer audit and a documented battery report.
                       </p>
                     </div>
 
@@ -316,10 +328,7 @@ export default function App() {
 
             {/* Explore the best laptop for you CTA Button Section */}
             <section className="bg-white py-12 sm:py-16 border-b border-[#E5E5E5] flex flex-col items-center justify-center text-center px-4">
-              <div className="max-w-xl space-y-5">
-                <span className="font-mono text-xs uppercase tracking-widest text-[#FF3B30] font-bold block">
-                  Interactive Showroom
-                </span>
+              <div className="max-w-xl">
                 <button
                   onClick={() => {
                     setCurrentTab('shop');

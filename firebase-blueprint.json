@@ -1,0 +1,80 @@
+{
+  "entities": {
+    "Laptop": {
+      "title": "Laptop Inventory Item",
+      "description": "Represents a fairly used laptop listing in the store inventory.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "brand": { "type": "string" },
+        "year": { "type": "number" },
+        "price": { "type": "number" },
+        "originalPrice": { "type": "number" },
+        "condition": { "type": "string" },
+        "batteryHealth": { "type": "number" },
+        "batteryNote": { "type": "string" },
+        "specs": {
+          "type": "object",
+          "properties": {
+            "cpu": { "type": "string" },
+            "ram": { "type": "string" },
+            "storage": { "type": "string" },
+            "screen": { "type": "string" },
+            "graphics": { "type": "string" }
+          },
+          "required": ["cpu", "ram", "storage", "screen"]
+        },
+        "image": { "type": "string" },
+        "additionalImages": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "stockCount": { "type": "number" },
+        "useCategory": { "type": "string" },
+        "description": { "type": "string" },
+        "serialNumber": { "type": "string" },
+        "inspectionPassed": { "type": "boolean" },
+        "isSold": { "type": "boolean" },
+        "buyerName": { "type": "string" },
+        "buyerFeedback": { "type": "string" },
+        "deliveredDate": { "type": "string" }
+      },
+      "required": ["name", "brand", "price", "condition", "specs", "image", "serialNumber"]
+    },
+    "Reservation": {
+      "title": "Inspection Reservation",
+      "description": "Holds placed by potential buyers to physically inspect or purchase a unit.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "laptopId": { "type": "string" },
+        "laptopName": { "type": "string" },
+        "serialNumber": { "type": "string" },
+        "price": { "type": "number" },
+        "userName": { "type": "string" },
+        "userPhone": { "type": "string" },
+        "userLocation": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["laptopId", "userName", "userPhone", "userLocation"]
+    },
+    "Testimonial": {
+      "title": "Customer Testimonial",
+      "description": "Verified buyer reviews and quotes.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "quote": { "type": "string" },
+        "rating": { "type": "number" },
+        "avatar": { "type": "string" },
+        "verifiedPurchase": { "type": "boolean" },
+        "laptopBought": { "type": "string" }
+      },
+      "required": ["name", "quote", "rating"]
+    }
+  }
+}

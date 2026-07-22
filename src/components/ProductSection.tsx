@@ -40,10 +40,10 @@ export default function ProductSection({
               Verified Collection
             </span>
             <h2 className="font-display font-bold text-3xl sm:text-4xl text-[#111111] mt-2 tracking-tight">
-              Available Units Instock
+              Verified Device Catalog
             </h2>
             <p className="font-sans text-xs sm:text-sm text-[#6B6B6B] mt-1">
-              Guaranteed genuine parts. Click any laptop to inspect battery diagnostics, full specs, and secure a reservation.
+              Browse our high-demand certified workstations and recently delivered units. Click any laptop to inspect full diagnostics.
             </p>
           </div>
 
@@ -140,7 +140,9 @@ export default function ProductSection({
               <div
                 key={laptop.id}
                 onClick={() => onSelectLaptop(laptop)}
-                className="group bg-white border border-[#E5E5E5] p-3 flex flex-col justify-between hover:border-[#111111] hover:-translate-y-1.5 hover:shadow-[0_12px_24px_-10px_rgba(0,0,0,0.08)] transition-all duration-300 ease-out cursor-pointer relative"
+                className={`group bg-white border border-[#E5E5E5] p-3 flex flex-col justify-between hover:border-[#111111] hover:-translate-y-1.5 hover:shadow-[0_12px_24px_-10px_rgba(0,0,0,0.08)] transition-all duration-300 ease-out cursor-pointer relative ${
+                  laptop.isSold ? 'opacity-90' : ''
+                }`}
               >
                 <div>
                   {/* Laptop Visual Card Container */}
@@ -149,20 +151,31 @@ export default function ProductSection({
                       src={laptop.image}
                       alt={laptop.name}
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out filter grayscale-[0.1]"
+                      className={`w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out filter grayscale-[0.1] ${
+                        laptop.isSold ? 'brightness-75 contrast-75' : ''
+                      }`}
                     />
 
-                    {/* Highly Controlled Red Urgency Tag (Low Stock) */}
-                    {laptop.stockCount <= 2 && (
+                    {/* Highly Controlled Red Urgency Tag (Low Stock) - only when NOT sold */}
+                    {!laptop.isSold && laptop.stockCount <= 2 && (
                       <div className="absolute top-2 left-2 bg-[#FF3B30] text-white text-[9px] font-mono font-bold tracking-wider px-2 py-0.5 flex items-center space-x-1 shadow-sm">
                         <Tag className="h-2.5 w-2.5 fill-white" />
                         <span>{laptop.stockCount === 1 ? 'ONLY 1 LEFT' : '2 UNITS LEFT'}</span>
                       </div>
                     )}
 
+                    {/* Bold "SOLD OUT" badge overlay */}
+                    {laptop.isSold && (
+                      <div className="absolute inset-0 bg-[#111111]/40 backdrop-blur-[0.5px] flex items-center justify-center z-10">
+                        <span className="bg-[#FF3B30] text-white text-[10px] sm:text-xs font-mono font-black tracking-widest px-3.5 py-1.5 shadow-md">
+                          SOLD OUT
+                        </span>
+                      </div>
+                    )}
+
                     {/* Standard checked pass watermark */}
                     {laptop.inspectionPassed && (
-                      <div className="absolute bottom-2 right-2 bg-[#111111]/80 text-white text-[8px] font-mono tracking-widest px-1.5 py-0.5 flex items-center space-x-1">
+                      <div className="absolute bottom-2 right-2 bg-[#111111]/80 text-white text-[8px] font-mono tracking-widest px-1.5 py-0.5 flex items-center space-x-1 z-10">
                         <ShieldCheck className="h-3 w-3 text-emerald-500" />
                         <span>VERIFIED</span>
                       </div>

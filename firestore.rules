@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Laptops Collection - Publicly readable, writeable by authenticated users or public for demo setup
+    match /laptops/{laptopId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Reservations Collection - Publicly writable for inspection holds, readable by all or owner
+    match /reservations/{reservationId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if true;
+    }
+
+    // Testimonials Collection - Publicly readable
+    match /testimonials/{testimonialId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}
