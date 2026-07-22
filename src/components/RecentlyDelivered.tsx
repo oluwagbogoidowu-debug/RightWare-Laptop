@@ -68,8 +68,8 @@ export default function RecentlyDelivered({ soldLaptops = SOLD_LAPTOPS }: Recent
                   <span className="text-[10px] font-mono bg-white border border-[#E5E5E5] text-[#111111] px-2 py-0.5">
                     {laptop.condition} Condition
                   </span>
-                  <span className="text-[10px] font-mono bg-white border border-[#E5E5E5] text-[#6B6B6B] px-2 py-0.5">
-                    {laptop.batteryNote}
+                  <span className="text-[10px] font-mono bg-white border border-[#E5E5E5] text-[#6B6B6B] px-2 py-0.5 truncate max-w-[180px]">
+                    {laptop.specs.graphics || 'Integrated GPU'}
                   </span>
                 </div>
               </div>

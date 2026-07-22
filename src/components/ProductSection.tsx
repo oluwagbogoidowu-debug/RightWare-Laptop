@@ -219,11 +219,11 @@ export default function ProductSection({
                     </span>
                   </div>
                   
-                  {/* Battery summary note */}
-                  <div className="flex flex-col items-end">
-                    <span className="text-[9px] font-mono text-[#6B6B6B] uppercase tracking-wider">Battery Check</span>
-                    <span className="font-mono text-[10px] font-bold text-[#111111] mt-0.5 flex items-center space-x-1 bg-emerald-50 text-emerald-700 px-1 py-0.5">
-                      <span>{laptop.batteryHealth}% Health</span>
+                  {/* Graphic Card summary note */}
+                  <div className="flex flex-col items-end max-w-[55%]">
+                    <span className="text-[9px] font-mono text-[#6B6B6B] uppercase tracking-wider">Graphic Card</span>
+                    <span className="font-mono text-[10px] font-bold text-[#111111] mt-0.5 flex items-center space-x-1 bg-neutral-100 text-neutral-800 px-1.5 py-0.5 truncate max-w-full">
+                      <span className="truncate">{laptop.specs.graphics || 'Integrated GPU'}</span>
                     </span>
                   </div>
                 </div>

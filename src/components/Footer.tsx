@@ -94,8 +94,6 @@ export default function Footer() {
             <span className="hover:text-white transition-colors">Price Match Verified</span>
             <span className="text-[#FF3B30]">•</span>
             <span className="hover:text-white transition-colors">Testing Standard v4.5</span>
-            <span className="text-[#FF3B30]">•</span>
-            <a href="#admin" className="hover:text-white transition-colors text-neutral-400 font-bold border border-dashed border-[#FF3B30]/30 px-1.5 py-0.5">Staff Portal</a>
           </div>
         </div>
       </div>
