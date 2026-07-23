@@ -336,65 +336,68 @@ export default function AdminPanel({
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F7F7] text-[#111111] font-sans selection:bg-[#FF3B30] selection:text-white flex flex-col justify-between">
+    <div className="min-h-screen bg-[#EFEFEF] text-[#111111] font-sans selection:bg-[#FF3B30] selection:text-white py-4 sm:py-8 px-2 sm:px-6 lg:px-8 flex flex-col justify-between">
       
-      {/* Admin Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-[#E5E5E5] px-4 sm:px-6 lg:px-8 py-4">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
-          
-          <div className="flex items-center space-x-3">
-            <div className="bg-[#FF3B30] text-white p-2 flex items-center justify-center">
-              <Settings className="h-4 w-4" />
-            </div>
-            <div>
-              <h1 className="font-display font-extrabold text-base sm:text-lg tracking-tight text-[#111111] flex items-center space-x-2">
-                <span>Rightware Laptops</span>
-                <span className="font-mono text-[9px] bg-[#111111] text-white px-2 py-0.5 tracking-widest font-black uppercase">
-                  ADMIN PANEL
-                </span>
-              </h1>
-              <p className="font-mono text-[9px] text-[#6B6B6B] mt-0.5 uppercase tracking-wider">
-                Logged in as <span className="text-[#FF3B30] font-bold">{adminEmail || 'Authorized Administrator'}</span>
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2.5">
-            <button
-              onClick={onClose}
-              className="bg-white hover:bg-neutral-50 text-[#111111] font-sans text-xs font-bold px-4 py-2.5 border border-[#E5E5E5] transition-colors cursor-pointer flex items-center space-x-2"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Back to Storefront</span>
-            </button>
-
-            <button
-              onClick={handleLogout}
-              className="bg-[#111111] hover:bg-black text-white font-sans text-xs font-bold px-4 py-2.5 transition-colors cursor-pointer flex items-center space-x-2"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              <span>Logout</span>
-            </button>
-          </div>
-
-        </div>
-      </header>
-
-      {/* Main Admin Dashboard Workspace */}
-      <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Boxed Separate Admin Workspace Container */}
+      <div className="max-w-7xl w-full mx-auto bg-white border border-[#D4D4D4] border-t-4 border-t-[#FF3B30] shadow-xl flex flex-col min-h-[85vh]">
         
-        {/* Success Notifications Overlay */}
-        {notification && (
-          <div className="fixed bottom-6 right-6 z-50 bg-[#111111] text-white border-l-4 border-[#FF3B30] p-4 shadow-xl font-sans text-xs flex items-center justify-between space-x-4 max-w-md animate-slide-in">
-            <div className="flex items-center space-x-2.5">
-              <CheckCircle className="h-4.5 w-4.5 text-emerald-400 flex-shrink-0" />
-              <span>{notification}</span>
+        {/* Admin Header */}
+        <header className="bg-white border-b border-[#E5E5E5] px-4 sm:px-8 py-5">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            
+            <div className="flex items-center space-x-3">
+              <div className="bg-[#FF3B30] text-white p-2.5 flex items-center justify-center shadow-xs">
+                <Settings className="h-4.5 w-4.5" />
+              </div>
+              <div>
+                <h1 className="font-display font-extrabold text-base sm:text-lg tracking-tight text-[#111111] flex items-center space-x-2">
+                  <span>Rightware Laptops</span>
+                  <span className="font-mono text-[9px] bg-[#111111] text-white px-2 py-0.5 tracking-widest font-black uppercase">
+                    ADMIN PORTAL
+                  </span>
+                </h1>
+                <p className="font-mono text-[9px] text-[#6B6B6B] mt-0.5 uppercase tracking-wider">
+                  Logged in as <span className="text-[#FF3B30] font-bold">{adminEmail || 'Authorized Administrator'}</span>
+                </p>
+              </div>
             </div>
-            <button onClick={() => setNotification(null)} className="text-neutral-400 hover:text-white cursor-pointer">
-              <X className="h-4 w-4" />
-            </button>
+
+            <div className="flex items-center space-x-2.5">
+              <button
+                onClick={onClose}
+                className="bg-white hover:bg-neutral-50 active:bg-neutral-100 text-[#111111] font-sans text-xs font-bold px-4 py-2.5 border border-[#CBD5E1] transition-colors cursor-pointer flex items-center space-x-2 shadow-2xs"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Back to Storefront</span>
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="bg-[#111111] hover:bg-black text-white font-sans text-xs font-bold px-4 py-2.5 transition-colors cursor-pointer flex items-center space-x-2 shadow-2xs"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span>Logout</span>
+              </button>
+            </div>
+
           </div>
-        )}
+        </header>
+
+        {/* Main Admin Dashboard Workspace */}
+        <main className="flex-grow p-4 sm:p-8">
+          
+          {/* Success Notifications Overlay */}
+          {notification && (
+            <div className="fixed bottom-8 right-8 z-50 bg-[#111111] text-white border-l-4 border-[#FF3B30] p-4 shadow-xl font-sans text-xs flex items-center justify-between space-x-4 max-w-md animate-slide-in">
+              <div className="flex items-center space-x-2.5">
+                <CheckCircle className="h-4.5 w-4.5 text-emerald-400 flex-shrink-0" />
+                <span>{notification}</span>
+              </div>
+              <button onClick={() => setNotification(null)} className="text-neutral-400 hover:text-white cursor-pointer">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
 
         {/* Dashboard Quick Summary Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -996,11 +999,12 @@ export default function AdminPanel({
 
       </main>
 
-      {/* Footer copyright */}
-      <footer className="border-t border-[#E5E5E5] py-5 text-center font-mono text-[9px] text-neutral-400">
-        © 2026 Rightware Laptops Staff Portal. All diagnostics and serial records are encrypted.
-      </footer>
+        {/* Footer copyright inside standalone container */}
+        <footer className="border-t border-[#E5E5E5] py-5 px-6 text-center font-mono text-[9px] text-neutral-400 bg-neutral-50/50">
+          © 2026 Rightware Laptops Staff Portal. All diagnostics and serial records are encrypted.
+        </footer>
 
+      </div>
     </div>
   );
 }
