@@ -2,7 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Laptop, LaptopCondition, LaptopSpecs } from '../types';
 import { saveLaptopToFirestore, deleteLaptopFromFirestore } from '../lib/firebaseService';
 import { auth, googleProvider, ALLOWED_ADMIN_EMAILS } from '../firebase';
-import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword 
+} from 'firebase/auth';
 import { 
   Plus, 
   Trash2, 
@@ -22,7 +28,11 @@ import {
   ArrowLeft,
   DollarSign,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  Mail,
+  Lock,
+  UserPlus,
+  LogIn
 } from 'lucide-react';
 
 interface AdminPanelProps {
@@ -45,6 +55,12 @@ export default function AdminPanel({
   const [adminEmail, setAdminEmail] = useState<string>('');
   const [loginError, setLoginError] = useState('');
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  // Email & Password Form Inputs
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Monitor Auth State
   useEffect(() => {
@@ -90,9 +106,87 @@ export default function AdminPanel({
       console.error('Google Sign-In error:', err);
       if (err.code === 'auth/popup-closed-by-user') {
         setLoginError('Sign-in cancelled by user.');
+      } else if (err.code === 'auth/unauthorized-domain' || err.message?.includes('unauthorized-domain')) {
+        setLoginError(
+          `Unauthorized Domain Error: The current domain (${window.location.hostname}) is not authorized in your Firebase Console.`
+        );
       } else {
         setLoginError(err.message || 'Failed to sign in with Google.');
       }
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  // Email & Password Form Submission
+  const handleEmailAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+
+    const trimmedEmail = emailInput.trim().toLowerCase();
+    if (!trimmedEmail) {
+      setLoginError('Please enter your email address.');
+      return;
+    }
+
+    if (!ALLOWED_ADMIN_EMAILS.includes(trimmedEmail)) {
+      setLoginError(`Access Denied: "${trimmedEmail}" is not an authorized administrator email. Only whitelisted emails are allowed.`);
+      return;
+    }
+
+    if (!passwordInput || passwordInput.length < 6) {
+      setLoginError('Password must be at least 6 characters.');
+      return;
+    }
+
+    setIsAuthLoading(true);
+
+    try {
+      if (authMode === 'login') {
+        try {
+          const userCred = await signInWithEmailAndPassword(auth, trimmedEmail, passwordInput);
+          setAdminEmail(userCred.user.email || trimmedEmail);
+          setIsLoggedIn(true);
+        } catch (err: any) {
+          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+            try {
+              const newCred = await createUserWithEmailAndPassword(auth, trimmedEmail, passwordInput);
+              setAdminEmail(newCred.user.email || trimmedEmail);
+              setIsLoggedIn(true);
+            } catch (createErr: any) {
+              if (createErr.code === 'auth/email-already-in-use') {
+                setLoginError('Incorrect password entered.');
+              } else {
+                setLoginError(createErr.message || 'Failed to log in with email/password.');
+              }
+            }
+          } else {
+            setLoginError(err.message || 'Failed to log in.');
+          }
+        }
+      } else {
+        // Sign Up Mode
+        try {
+          const userCred = await createUserWithEmailAndPassword(auth, trimmedEmail, passwordInput);
+          setAdminEmail(userCred.user.email || trimmedEmail);
+          setIsLoggedIn(true);
+        } catch (err: any) {
+          if (err.code === 'auth/email-already-in-use') {
+            try {
+              const userCred = await signInWithEmailAndPassword(auth, trimmedEmail, passwordInput);
+              setAdminEmail(userCred.user.email || trimmedEmail);
+              setIsLoggedIn(true);
+            } catch (signErr: any) {
+              setLoginError('An account with this email exists. Incorrect password entered.');
+            }
+          } else {
+            setLoginError(err.message || 'Failed to create account.');
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error('Email Auth Error:', err);
+      setLoginError(err.message || 'Authentication error.');
     } finally {
       setIsAuthLoading(false);
     }
@@ -275,22 +369,133 @@ export default function AdminPanel({
               Rightware Admin
             </h2>
             <p className="font-sans text-xs text-[#6B6B6B] mt-1.5 leading-relaxed">
-              Sign in with your authorized Google Account (Gmail) to manage store inventory and listings.
+              Sign in with your email or authorized Google Account (Gmail) to access store administration.
             </p>
           </div>
 
           {loginError && (
-            <div className="bg-red-50 border border-red-200 text-red-700 p-3.5 text-xs flex items-start space-x-2.5 mb-6 leading-relaxed">
-              <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-              <span>{loginError}</span>
+            <div className="bg-red-50 border border-red-200 text-red-700 p-3.5 text-xs flex flex-col space-y-2 mb-6 leading-relaxed">
+              <div className="flex items-start space-x-2.5">
+                <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <span>{loginError}</span>
+              </div>
+              {loginError.includes('Unauthorized Domain') && (
+                <div className="mt-2 pt-2 border-t border-red-200/80 font-sans text-[11px] text-red-900 space-y-2">
+                  <p className="font-bold">How to fix in Firebase Console:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-red-800">
+                    <li>Open <strong>Firebase Console &gt; Authentication &gt; Settings &gt; Authorized domains</strong>.</li>
+                    <li>Click <strong>Add domain</strong> and add this domain:</li>
+                  </ol>
+                  <div className="flex items-center space-x-2 bg-white border border-red-300 p-1.5 font-mono text-[10px] text-neutral-800">
+                    <span className="truncate flex-1">{window.location.hostname}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(window.location.hostname);
+                        alert('Domain copied to clipboard!');
+                      }}
+                      className="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 text-[9px] font-mono font-bold uppercase transition-colors cursor-pointer"
+                    >
+                      Copy Domain
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
+          {/* Login / Sign Up Tabs */}
+          <div className="flex border-b border-[#E5E5E5] mb-5 font-mono text-xs">
+            <button
+              type="button"
+              onClick={() => { setAuthMode('login'); setLoginError(''); }}
+              className={`flex-1 py-2 font-bold transition-colors flex items-center justify-center space-x-1.5 cursor-pointer ${
+                authMode === 'login'
+                  ? 'border-b-2 border-[#FF3B30] text-[#111111] bg-neutral-50/80'
+                  : 'text-[#6B6B6B] hover:text-[#111111]'
+              }`}
+            >
+              <LogIn className="h-3.5 w-3.5" />
+              <span>Sign In</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setAuthMode('signup'); setLoginError(''); }}
+              className={`flex-1 py-2 font-bold transition-colors flex items-center justify-center space-x-1.5 cursor-pointer ${
+                authMode === 'signup'
+                  ? 'border-b-2 border-[#FF3B30] text-[#111111] bg-neutral-50/80'
+                  : 'text-[#6B6B6B] hover:text-[#111111]'
+              }`}
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              <span>Create Account</span>
+            </button>
+          </div>
+
+          {/* Email & Password Input Form */}
+          <form onSubmit={handleEmailAuthSubmit} className="space-y-4 mb-5">
+            <div>
+              <label className="block font-mono text-[10px] text-neutral-600 uppercase tracking-wider mb-1 font-bold flex items-center space-x-1">
+                <Mail className="h-3 w-3 text-[#FF3B30]" />
+                <span>Email Address</span>
+              </label>
+              <input
+                type="email"
+                required
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                placeholder="idelijah0@gmail.com"
+                className="w-full bg-white border border-[#CBD5E1] px-3.5 py-2.5 font-sans text-xs text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-1 focus:ring-[#111111]"
+              />
+            </div>
+
+            <div>
+              <label className="block font-mono text-[10px] text-neutral-600 uppercase tracking-wider mb-1 font-bold flex items-center space-x-1">
+                <Lock className="h-3 w-3 text-[#FF3B30]" />
+                <span>Password</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="Enter password (min 6 characters)"
+                  className="w-full bg-white border border-[#CBD5E1] px-3.5 py-2.5 pr-10 font-sans text-xs text-[#111111] focus:outline-none focus:border-[#111111] focus:ring-1 focus:ring-[#111111]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isAuthLoading}
+              className="w-full bg-[#111111] hover:bg-black text-white font-sans text-xs font-bold py-3 transition-all cursor-pointer flex items-center justify-center space-x-2 shadow-sm disabled:opacity-50"
+            >
+              <span>{isAuthLoading ? 'Authenticating...' : authMode === 'login' ? 'Sign In to Admin' : 'Create Account'}</span>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="relative flex py-1 items-center mb-4">
+            <div className="flex-grow border-t border-gray-200"></div>
+            <span className="flex-shrink mx-3 text-[10px] font-mono text-gray-400 uppercase tracking-widest">OR CONTINUE WITH</span>
+            <div className="flex-grow border-t border-gray-200"></div>
+          </div>
+
           <div className="space-y-4">
             <button
+              type="button"
               onClick={handleGoogleSignIn}
               disabled={isAuthLoading}
-              className="w-full bg-white hover:bg-neutral-50 active:bg-neutral-100 border border-[#CBD5E1] hover:border-[#111111] text-[#1E293B] font-sans text-xs font-bold py-3.5 px-4 shadow-xs transition-all cursor-pointer flex items-center justify-center space-x-3 disabled:opacity-50"
+              className="w-full bg-white hover:bg-neutral-50 active:bg-neutral-100 border border-[#CBD5E1] hover:border-[#111111] text-[#1E293B] font-sans text-xs font-bold py-3 px-4 shadow-xs transition-all cursor-pointer flex items-center justify-center space-x-3 disabled:opacity-50"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24">
                 <path
