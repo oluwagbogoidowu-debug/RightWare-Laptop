@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CustomSelect } from './CustomSelect';
 import { Laptop, LaptopCondition, LaptopSpecs } from '../types';
 import { saveLaptopToFirestore, deleteLaptopFromFirestore } from '../lib/firebaseService';
+import { uploadToCloudinary } from '../lib/cloudinaryService';
 import { formatNaira, convertGoogleDriveUrl } from '../lib/utils';
 import { auth, googleProvider, ALLOWED_ADMIN_EMAILS } from '../firebase';
 import { 
@@ -394,37 +395,44 @@ export default function AdminPanel({
   const [fileName, setFileName] = useState<string>('');
   const [driveLinkInput, setDriveLinkInput] = useState<string>('');
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const newImages: string[] = [];
     const filesArray = Array.from(files) as File[];
-    let processed = 0;
+    setIsUploadingImage(true);
+    triggerNotification(`Uploading ${filesArray.length} image(s) securely to Cloudinary...`);
 
-    filesArray.forEach((file) => {
-      if (file.size > 8 * 1024 * 1024) {
-        triggerNotification(`Skipped ${file.name}: File exceeds 8MB.`);
-        processed++;
-        if (processed === filesArray.length && newImages.length > 0) {
-          setFormImages((prev) => [...prev, ...newImages]);
-        }
-        return;
+    const uploadedUrls: string[] = [];
+    const prefix = formSerial ? formSerial.replace(/[^a-zA-Z0-9_-]/g, '_') : 'new';
+
+    for (let i = 0; i < filesArray.length; i++) {
+      const file = filesArray[i];
+      if (file.size > 15 * 1024 * 1024) {
+        triggerNotification(`Skipped ${file.name}: Exceeds 15MB limit.`);
+        continue;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (reader.result) {
-          newImages.push(reader.result as string);
-        }
-        processed++;
-        if (processed === filesArray.length) {
-          setFormImages((prev) => [...prev, ...newImages]);
-          triggerNotification(`Added ${newImages.length} image(s).`);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+      try {
+        const publicId = `laptop_${prefix}_${Date.now()}_${i + 1}`;
+        const cloudinaryUrl = await uploadToCloudinary(file, {
+          folder: 'rightware_laptops',
+          publicId
+        });
+        uploadedUrls.push(cloudinaryUrl);
+      } catch (err: any) {
+        console.error('Cloudinary upload error:', err);
+        triggerNotification(`Error uploading ${file.name}: ${err.message || 'Upload failed'}`);
+      }
+    }
 
+    if (uploadedUrls.length > 0) {
+      setFormImages((prev) => [...prev, ...uploadedUrls]);
+      triggerNotification(`Cloudinary upload complete! Optimized & added ${uploadedUrls.length} image(s).`);
+    }
+
+    setIsUploadingImage(false);
     e.target.value = '';
   };
 
@@ -474,37 +482,42 @@ export default function AdminPanel({
     setEditDriveInput('');
   };
 
-  const handleEditFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0 || !editingLaptop) return;
 
-    const newImages: string[] = [];
     const filesArray = Array.from(files) as File[];
-    let processed = 0;
+    setIsUploadingImage(true);
+    triggerNotification(`Uploading ${filesArray.length} image(s) to Cloudinary...`);
 
-    filesArray.forEach((file) => {
-      if (file.size > 8 * 1024 * 1024) {
-        triggerNotification(`Skipped ${file.name}: File exceeds 8MB.`);
-        processed++;
-        if (processed === filesArray.length && newImages.length > 0) {
-          setEditImages((prev) => [...prev, ...newImages]);
-        }
-        return;
+    const uploadedUrls: string[] = [];
+    const prefix = editingLaptop.serialNumber ? editingLaptop.serialNumber.replace(/[^a-zA-Z0-9_-]/g, '_') : editingLaptop.id;
+
+    for (let i = 0; i < filesArray.length; i++) {
+      const file = filesArray[i];
+      if (file.size > 15 * 1024 * 1024) {
+        triggerNotification(`Skipped ${file.name}: Exceeds 15MB limit.`);
+        continue;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (reader.result) {
-          newImages.push(reader.result as string);
-        }
-        processed++;
-        if (processed === filesArray.length) {
-          setEditImages((prev) => [...prev, ...newImages]);
-          triggerNotification(`Added ${newImages.length} image(s).`);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+      try {
+        const publicId = `laptop_${prefix}_${Date.now()}_${i + 1}`;
+        const cloudinaryUrl = await uploadToCloudinary(file, {
+          folder: 'rightware_laptops',
+          publicId
+        });
+        uploadedUrls.push(cloudinaryUrl);
+      } catch (err: any) {
+        console.error('Cloudinary upload error:', err);
+        triggerNotification(`Error uploading ${file.name}: ${err.message || 'Upload failed'}`);
+      }
+    }
 
+    if (uploadedUrls.length > 0) {
+      setEditImages((prev) => [...prev, ...uploadedUrls]);
+      triggerNotification(`Cloudinary upload complete! Added ${uploadedUrls.length} image(s).`);
+    }
+
+    setIsUploadingImage(false);
     e.target.value = '';
   };
 
@@ -525,6 +538,32 @@ export default function AdminPanel({
     e.preventDefault();
     if (!editingLaptop) return;
 
+    setIsSubmitting(true);
+    triggerNotification('Processing and optimizing laptop images on Cloudinary...');
+
+    // Cloudinary processing for edit images
+    const processedEditImages: string[] = [];
+    const prefix = (editForm.serialNumber || editingLaptop.serialNumber || editingLaptop.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+
+    for (let i = 0; i < editImages.length; i++) {
+      const img = editImages[i];
+      if (img.startsWith('data:image/')) {
+        try {
+          const publicId = `laptop_${prefix}_${Date.now()}_${i + 1}`;
+          const cUrl = await uploadToCloudinary(img, {
+            folder: 'rightware_laptops',
+            publicId
+          });
+          processedEditImages.push(cUrl);
+        } catch (err) {
+          console.warn('Could not upload base64 image to Cloudinary:', err);
+          processedEditImages.push(img);
+        }
+      } else {
+        processedEditImages.push(img);
+      }
+    }
+
     const defaultImages = {
       Apple: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=800&q=80',
       Lenovo: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=800&q=80',
@@ -533,8 +572,8 @@ export default function AdminPanel({
     };
 
     const fallbackImg = defaultImages[(editForm.brand || editingLaptop.brand) as keyof typeof defaultImages] || defaultImages.Dell;
-    const primaryImg = editImages.length > 0 ? editImages[0] : fallbackImg;
-    const allImgs = editImages.length > 0 ? editImages : [fallbackImg];
+    const primaryImg = processedEditImages.length > 0 ? processedEditImages[0] : fallbackImg;
+    const allImgs = processedEditImages.length > 0 ? processedEditImages : [fallbackImg];
 
     const updatedLaptop: Laptop = {
       ...editingLaptop,
@@ -563,11 +602,10 @@ export default function AdminPanel({
     };
 
     try {
-      setIsSubmitting(true);
       await saveLaptopToFirestore(updatedLaptop);
       const updatedList = laptops.map((l) => (l.id === updatedLaptop.id ? updatedLaptop : l));
       onUpdateLaptops(updatedList);
-      triggerNotification(`Updated & synced ${updatedLaptop.name} images in Firestore database!`);
+      triggerNotification(`Updated & synced ${updatedLaptop.name} Cloudinary images in Firestore!`);
       setEditingLaptop(null);
     } catch (err) {
       console.error('Error updating laptop:', err);
@@ -597,6 +635,30 @@ export default function AdminPanel({
     }
 
     setIsSubmitting(true);
+    triggerNotification('Uploading & optimizing images via Cloudinary...');
+
+    // Process all images to ensure Cloudinary CDN URLs
+    const processedFormImages: string[] = [];
+    const prefix = formSerial.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+    for (let i = 0; i < formImages.length; i++) {
+      const img = formImages[i];
+      if (img.startsWith('data:image/')) {
+        try {
+          const publicId = `laptop_${prefix}_${Date.now()}_${i + 1}`;
+          const cUrl = await uploadToCloudinary(img, {
+            folder: 'rightware_laptops',
+            publicId
+          });
+          processedFormImages.push(cUrl);
+        } catch (err) {
+          console.warn('Error uploading base64 image to Cloudinary:', err);
+          processedFormImages.push(img);
+        }
+      } else {
+        processedFormImages.push(img);
+      }
+    }
 
     const defaultImages = {
       Apple: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=800&q=80',
@@ -606,8 +668,8 @@ export default function AdminPanel({
     };
 
     const fallbackImage = defaultImages[formBrand as keyof typeof defaultImages] || defaultImages.Dell;
-    const primaryImage = formImages.length > 0 ? formImages[0] : fallbackImage;
-    const allImagesList = formImages.length > 0 ? formImages : [fallbackImage];
+    const primaryImage = processedFormImages.length > 0 ? processedFormImages[0] : fallbackImage;
+    const allImagesList = processedFormImages.length > 0 ? processedFormImages : [fallbackImage];
 
     const newLaptop: Laptop = {
       id: `lap-${Date.now()}`,
@@ -640,7 +702,7 @@ export default function AdminPanel({
       await saveLaptopToFirestore(newLaptop);
       const updated = [newLaptop, ...laptops];
       onUpdateLaptops(updated);
-      triggerNotification(`Successfully stored in database & launched listing: ${formName}`);
+      triggerNotification(`Cloudinary images stored in database & listing launched: ${formName}`);
       
       // Reset Form Fields
       setFormName('');
@@ -1340,8 +1402,9 @@ export default function AdminPanel({
                     <label className="block font-sans text-xs font-bold text-neutral-700">
                       Laptop Images ({formImages.length})
                     </label>
-                    <span className="font-mono text-[10px] text-neutral-400">
-                      Select 1 or multiple images
+                    <span className="font-mono text-[9px] text-emerald-700 bg-emerald-50 px-2 py-0.5 border border-emerald-200 font-bold flex items-center space-x-1">
+                      <ImageIcon className="h-3 w-3 text-emerald-600" />
+                      <span>Cloudinary Signed Uploads</span>
                     </span>
                   </div>
 
@@ -1357,7 +1420,7 @@ export default function AdminPanel({
                       }`}
                     >
                       <Upload className="h-3.5 w-3.5 text-[#FF3B30]" />
-                      <span>Pick from My Files</span>
+                      <span>Cloudinary File Upload</span>
                     </button>
                     <button
                       type="button"
@@ -1382,7 +1445,8 @@ export default function AdminPanel({
                           accept="image/*"
                           multiple
                           onChange={handleFileUpload}
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                          disabled={isUploadingImage}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 disabled:cursor-not-allowed"
                         />
                         <div className="flex flex-col items-center justify-center space-y-1">
                           <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -1390,10 +1454,10 @@ export default function AdminPanel({
                           </div>
                           <div>
                             <p className="font-sans text-xs font-bold text-[#111111]">
-                              Click or Drag & Drop Image Files
+                              {isUploadingImage ? 'Uploading to Cloudinary...' : 'Click or Drag & Drop Image Files'}
                             </p>
                             <p className="font-mono text-[10px] text-neutral-400 mt-0.5">
-                              Hold Ctrl/Cmd or Shift to select multiple files (Max 8MB each)
+                              Cloudinary auto-format & quality optimization • Folder: rightware_laptops
                             </p>
                           </div>
                         </div>
