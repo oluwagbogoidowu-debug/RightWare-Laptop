@@ -10,41 +10,66 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configure Cloudinary with environment variables or user credentials
-const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'dbkuaoop7';
-const apiKey = process.env.CLOUDINARY_API_KEY || '149863477863142';
-const apiSecret = process.env.CLOUDINARY_API_SECRET || 'gKyEJyKgL7xxFICFdVnhIBw5RTM';
+// Configure Cloudinary with valid credentials or fallback to user credentials
+const DEFAULT_CLOUD_NAME = 'dbkuaoop7';
+const DEFAULT_API_KEY = '149863477863142';
+const DEFAULT_API_SECRET = 'gKyEJyKgL7xxFICFdVnhIBw5RTM';
 
-if (process.env.CLOUDINARY_URL) {
-  cloudinary.config({
-    cloudinary_url: process.env.CLOUDINARY_URL,
-    secure: true
-  });
-} else {
-  cloudinary.config({
-    cloud_name: cloudName,
-    api_key: apiKey,
-    api_secret: apiSecret,
-    secure: true
-  });
+function getCloudinaryCredentials() {
+  const envUrl = process.env.CLOUDINARY_URL;
+  if (envUrl && envUrl.startsWith('cloudinary://') && !envUrl.includes('<')) {
+    return {
+      cloudName: DEFAULT_CLOUD_NAME,
+      apiKey: DEFAULT_API_KEY,
+      apiSecret: DEFAULT_API_SECRET,
+      config: { cloudinary_url: envUrl, secure: true }
+    };
+  }
+
+  const cloudName = (process.env.CLOUDINARY_CLOUD_NAME && !process.env.CLOUDINARY_CLOUD_NAME.includes('<'))
+    ? process.env.CLOUDINARY_CLOUD_NAME
+    : DEFAULT_CLOUD_NAME;
+
+  const apiKey = (process.env.CLOUDINARY_API_KEY && !process.env.CLOUDINARY_API_KEY.includes('<'))
+    ? process.env.CLOUDINARY_API_KEY
+    : DEFAULT_API_KEY;
+
+  const apiSecret = (process.env.CLOUDINARY_API_SECRET && !process.env.CLOUDINARY_API_SECRET.includes('<'))
+    ? process.env.CLOUDINARY_API_SECRET
+    : DEFAULT_API_SECRET;
+
+  return {
+    cloudName,
+    apiKey,
+    apiSecret,
+    config: {
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
+      secure: true
+    }
+  };
 }
 
-console.log(`Cloudinary configured for cloud_name: ${cloudName}`);
+const creds = getCloudinaryCredentials();
+cloudinary.config(creds.config);
+
+console.log(`Cloudinary configured for cloud_name: ${creds.cloudName}`);
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Body parser with 20mb payload limit for base64 image data
-  app.use(express.json({ limit: '20mb' }));
-  app.use(express.urlencoded({ limit: '20mb', extended: true }));
+  // Body parser with 50mb payload limit for high-res images
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   // API Route: Health Check
   app.get('/api/health', (_req, res) => {
     res.json({
       status: 'ok',
       cloudinaryConfigured: true,
-      cloudName: cloudName
+      cloudName: creds.cloudName
     });
   });
 
@@ -58,16 +83,13 @@ async function startServer() {
       }
 
       const options: Record<string, any> = {
-        folder: folder,
-        overwrite: true,
-        resource_type: 'auto',
-        transformation: [
-          { quality: 'auto', fetch_format: 'auto' } // Automatic optimization & WebP/AVIF format
-        ]
+        folder: folder || 'rightware_laptops',
+        resource_type: 'auto'
       };
 
       if (publicId && typeof publicId === 'string' && publicId.trim().length > 0) {
         options.public_id = publicId.trim();
+        options.overwrite = true;
         options.invalidate = true; // Invalidate CDN cache when overwriting
       }
 
@@ -83,14 +105,14 @@ async function startServer() {
         bytes: uploadResult.bytes
       });
     } catch (err: any) {
-      console.error('Cloudinary Upload Error:', err);
+      console.error('Cloudinary Upload Error Details:', err);
       return res.status(500).json({
-        error: err.message || 'Failed to upload image to Cloudinary'
+        error: err.message || (typeof err === 'string' ? err : 'Failed to upload image to Cloudinary')
       });
     }
   });
 
-  // API Route: Generate Signed Upload Parameters (for direct client uploads if preferred)
+  // API Route: Generate Signed Upload Parameters (for direct client uploads)
   app.post('/api/cloudinary-signature', (req, res) => {
     try {
       const { folder = 'rightware_laptops', publicId } = req.body;
@@ -101,21 +123,21 @@ async function startServer() {
         folder: folder
       };
 
-      if (publicId) {
-        paramsToSign.public_id = publicId;
+      if (publicId && typeof publicId === 'string' && publicId.trim().length > 0) {
+        paramsToSign.public_id = publicId.trim();
         paramsToSign.overwrite = true;
       }
 
       const signature = cloudinary.utils.api_sign_request(
         paramsToSign,
-        apiSecret
+        creds.apiSecret
       );
 
       return res.json({
         signature,
         timestamp,
-        cloudName,
-        apiKey,
+        cloudName: creds.cloudName,
+        apiKey: creds.apiKey,
         folder
       });
     } catch (err: any) {

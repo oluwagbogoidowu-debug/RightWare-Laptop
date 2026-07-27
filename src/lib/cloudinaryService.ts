@@ -1,7 +1,6 @@
 /**
  * Cloudinary Upload Utility Service
- * Connects to the secure backend endpoint /api/upload-image
- * uploads images using Cloudinary API credentials with auto-optimization & organization
+ * Uses backend endpoint /api/upload-image with fallback to direct signed client upload
  */
 
 export interface CloudinaryUploadResponse {
@@ -16,7 +15,7 @@ export interface CloudinaryUploadResponse {
 }
 
 /**
- * Uploads a File object or base64 data URL to Cloudinary via backend signed API endpoint
+ * Uploads a File object or base64 data URL to Cloudinary
  */
 export async function uploadToCloudinary(
   imageInput: File | string,
@@ -29,38 +28,96 @@ export async function uploadToCloudinary(
   const folder = options?.folder || 'rightware_laptops';
   const publicId = options?.publicId;
 
-  let base64Data: string;
-
-  if (typeof imageInput === 'string') {
-    base64Data = imageInput;
-  } else {
-    base64Data = await fileToBase64(imageInput);
+  // If already an http/https image URL (like Unsplash), return directly
+  if (typeof imageInput === 'string' && (imageInput.startsWith('http://') || imageInput.startsWith('https://'))) {
+    if (!imageInput.includes('base64')) {
+      return imageInput;
+    }
   }
 
-  const response = await fetch('/api/upload-image', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      image: base64Data,
-      folder,
-      publicId
-    })
-  });
+  // Strategy 1: Attempt direct backend upload endpoint
+  try {
+    let base64Data: string;
+    if (typeof imageInput === 'string') {
+      base64Data = imageInput;
+    } else {
+      base64Data = await fileToBase64(imageInput);
+    }
 
-  if (!response.ok) {
-    const errData = await response.json().catch(() => ({ error: 'Upload failed' }));
-    throw new Error(errData.error || `Cloudinary upload failed with status ${response.status}`);
+    const response = await fetch('/api/upload-image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        image: base64Data,
+        folder,
+        publicId
+      })
+    });
+
+    if (response.ok) {
+      const data: CloudinaryUploadResponse = await response.json();
+      if (data.success && data.url) {
+        return data.url;
+      }
+    }
+  } catch (backendErr) {
+    console.warn('Backend Cloudinary upload endpoint failed, trying direct signed upload:', backendErr);
   }
 
-  const data: CloudinaryUploadResponse = await response.json();
+  // Strategy 2: Direct signed upload to Cloudinary Edge API
+  try {
+    const sigRes = await fetch('/api/cloudinary-signature', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folder, publicId })
+    });
 
-  if (!data.success || !data.url) {
-    throw new Error(data.error || 'Invalid response from Cloudinary upload service');
+    if (!sigRes.ok) {
+      throw new Error(`Failed to obtain Cloudinary upload signature (status ${sigRes.status})`);
+    }
+
+    const sigData = await sigRes.json();
+    const formData = new FormData();
+
+    if (typeof imageInput === 'string') {
+      formData.append('file', imageInput);
+    } else {
+      formData.append('file', imageInput);
+    }
+
+    formData.append('api_key', sigData.apiKey);
+    formData.append('timestamp', sigData.timestamp.toString());
+    formData.append('signature', sigData.signature);
+    formData.append('folder', sigData.folder);
+
+    if (publicId) {
+      formData.append('public_id', publicId);
+      formData.append('overwrite', 'true');
+    }
+
+    const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`;
+    const directRes = await fetch(cloudinaryUrl, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!directRes.ok) {
+      const errorJson = await directRes.json().catch(() => ({}));
+      throw new Error(errorJson.error?.message || `Direct Cloudinary upload failed (${directRes.status})`);
+    }
+
+    const directData = await directRes.json();
+    if (directData.secure_url) {
+      return directData.secure_url;
+    }
+  } catch (directErr: any) {
+    console.error('Direct Cloudinary upload error:', directErr);
+    throw new Error(directErr.message || 'Failed to upload image to Cloudinary');
   }
 
-  return data.url;
+  throw new Error('Cloudinary upload failed via all strategies.');
 }
 
 /**
@@ -74,3 +131,4 @@ export function fileToBase64(file: File): Promise<string> {
     reader.onerror = (error) => reject(error);
   });
 }
+
