@@ -37,7 +37,8 @@ import {
   Upload,
   HardDrive,
   ExternalLink,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Star
 } from 'lucide-react';
 
 export const GPU_OPTIONS = [
@@ -386,31 +387,69 @@ export default function AdminPanel({
   const [formStorage, setFormStorage] = useState('512GB');
   const [formScreen, setFormScreen] = useState('14" Retina Display');
   const [formGraphics, setFormGraphics] = useState('Intel Iris Xe Graphics');
-  const [formImage, setFormImage] = useState('');
+  const [formImages, setFormImages] = useState<string[]>([]);
   const [imageSourceMode, setImageSourceMode] = useState<'file' | 'drive'>('file');
   const [fileName, setFileName] = useState<string>('');
   const [driveLinkInput, setDriveLinkInput] = useState<string>('');
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newImages: string[] = [];
+    const filesArray = Array.from(files) as File[];
+    let processed = 0;
+
+    filesArray.forEach((file) => {
       if (file.size > 8 * 1024 * 1024) {
-        triggerNotification('Selected file is too large (max 8MB).');
+        triggerNotification(`Skipped ${file.name}: File exceeds 8MB.`);
+        processed++;
+        if (processed === filesArray.length && newImages.length > 0) {
+          setFormImages((prev) => [...prev, ...newImages]);
+        }
         return;
       }
-      setFileName(file.name);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormImage(reader.result as string);
+        if (reader.result) {
+          newImages.push(reader.result as string);
+        }
+        processed++;
+        if (processed === filesArray.length) {
+          setFormImages((prev) => [...prev, ...newImages]);
+          triggerNotification(`Added ${newImages.length} image(s).`);
+        }
       };
       reader.readAsDataURL(file);
+    });
+
+    e.target.value = '';
+  };
+
+  const handleAddDriveUrl = () => {
+    if (!driveLinkInput.trim()) return;
+    const rawInput = driveLinkInput.trim();
+    const links = rawInput.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+    const convertedLinks = links.map(convertGoogleDriveUrl);
+
+    if (convertedLinks.length > 0) {
+      setFormImages((prev) => [...prev, ...convertedLinks]);
+      setDriveLinkInput('');
+      triggerNotification(`Added ${convertedLinks.length} Google Drive/Web image(s).`);
     }
   };
 
-  const handleDriveUrlChange = (url: string) => {
-    setDriveLinkInput(url);
-    const converted = convertGoogleDriveUrl(url);
-    setFormImage(converted);
+  const handleRemoveImage = (index: number) => {
+    setFormImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleMakePrimaryImage = (index: number) => {
+    if (index === 0) return;
+    setFormImages((prev) => {
+      const selected = prev[index];
+      const rest = prev.filter((_, i) => i !== index);
+      return [selected, ...rest];
+    });
   };
   const [formStock, setFormStock] = useState(1);
   const [formCategory, setFormCategory] = useState<string>('Business / Office Work');
@@ -447,7 +486,9 @@ export default function AdminPanel({
       HP: 'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?auto=format&fit=crop&w=800&q=80'
     };
 
-    const laptopImage = formImage.trim() || defaultImages[formBrand as keyof typeof defaultImages] || defaultImages.Dell;
+    const fallbackImage = defaultImages[formBrand as keyof typeof defaultImages] || defaultImages.Dell;
+    const primaryImage = formImages.length > 0 ? formImages[0] : fallbackImage;
+    const allImagesList = formImages.length > 0 ? formImages : [fallbackImage];
 
     const newLaptop: Laptop = {
       id: `lap-${Date.now()}`,
@@ -466,8 +507,8 @@ export default function AdminPanel({
         screen: formScreen,
         graphics: formGraphics
       },
-      image: laptopImage,
-      additionalImages: [laptopImage],
+      image: primaryImage,
+      additionalImages: allImagesList,
       stockCount: Number(formStock),
       useCategory: formCategory,
       description: formDescription || `Tested and verified ${formCondition} condition ${formName}. Fully ready for productivity.`,
@@ -487,7 +528,7 @@ export default function AdminPanel({
       setFormCpu('');
       setFormSerial('');
       setFormDescription('');
-      setFormImage('');
+      setFormImages([]);
       setFileName('');
       setDriveLinkInput('');
       setFormStock(1);
@@ -1222,9 +1263,14 @@ export default function AdminPanel({
                 </div>
 
                 <div>
-                  <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
-                    Laptop Image
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-sans text-xs font-bold text-neutral-700">
+                      Laptop Images ({formImages.length})
+                    </label>
+                    <span className="font-mono text-[10px] text-neutral-400">
+                      Select 1 or multiple images
+                    </span>
+                  </div>
 
                   {/* Mode Selector */}
                   <div className="flex border border-[#E5E5E5] p-0.5 bg-neutral-50 mb-2">
@@ -1261,6 +1307,7 @@ export default function AdminPanel({
                         <input
                           type="file"
                           accept="image/*"
+                          multiple
                           onChange={handleFileUpload}
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                         />
@@ -1270,10 +1317,10 @@ export default function AdminPanel({
                           </div>
                           <div>
                             <p className="font-sans text-xs font-bold text-[#111111]">
-                              Click or Drag & Drop Image File
+                              Click or Drag & Drop Image Files
                             </p>
                             <p className="font-mono text-[10px] text-neutral-400 mt-0.5">
-                              Supports PNG, JPG, WEBP, GIF (Max 8MB)
+                              Hold Ctrl/Cmd or Shift to select multiple files (Max 8MB each)
                             </p>
                           </div>
                         </div>
@@ -1284,65 +1331,124 @@ export default function AdminPanel({
                   {/* Mode 2: Google Drive / Web Link */}
                   {imageSourceMode === 'drive' && (
                     <div className="space-y-1.5">
-                      <div className="relative">
+                      <div className="flex space-x-2">
                         <input
                           type="url"
                           value={driveLinkInput}
-                          onChange={(e) => handleDriveUrlChange(e.target.value)}
-                          placeholder="Paste Google Drive share link (e.g. https://drive.google.com/file/d/...)"
-                          className="w-full bg-white border border-[#E5E5E5] px-3 py-2 pr-24 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
+                          onChange={(e) => setDriveLinkInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddDriveUrl();
+                            }
+                          }}
+                          placeholder="Paste Google Drive link or image URL..."
+                          className="flex-1 bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
                         />
+                        <button
+                          type="button"
+                          onClick={handleAddDriveUrl}
+                          className="px-3.5 py-2 bg-[#111111] hover:bg-[#222222] text-white font-mono text-xs font-bold flex items-center space-x-1.5 cursor-pointer shrink-0"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          <span>Add Image</span>
+                        </button>
+                      </div>
+                      <p className="font-mono text-[10px] text-neutral-500 bg-neutral-50 p-2 border border-neutral-200 leading-tight flex items-center justify-between">
+                        <span>💡 Paste Google Drive share links (set to "Anyone with the link"). You can add multiple links!</span>
                         <a
                           href="https://drive.google.com"
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="absolute right-1 top-1 bottom-1 px-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-mono text-[10px] font-bold flex items-center space-x-1 border border-neutral-300"
+                          className="ml-2 px-1.5 py-0.5 bg-neutral-200 hover:bg-neutral-300 text-neutral-800 text-[9px] font-bold inline-flex items-center space-x-0.5 border border-neutral-300"
                         >
-                          <span>Open Drive</span>
-                          <ExternalLink className="h-3 w-3" />
+                          <span>Drive</span>
+                          <ExternalLink className="h-2.5 w-2.5" />
                         </a>
-                      </div>
-                      <p className="font-mono text-[10px] text-neutral-500 bg-neutral-50 p-2 border border-neutral-200 leading-tight">
-                        💡 Set Google Drive sharing to <strong>"Anyone with the link"</strong> then paste link here. It converts automatically into a direct display image.
                       </p>
                     </div>
                   )}
 
-                  {/* Selected Image Preview */}
-                  {formImage ? (
-                    <div className="mt-2.5 bg-neutral-50 border border-[#E5E5E5] p-2.5 flex items-center space-x-3">
-                      <img
-                        src={formImage}
-                        alt="Laptop preview"
-                        className="w-14 h-12 object-cover border border-[#CBD5E1] bg-white flex-shrink-0"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = 'none';
-                        }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <span className="font-mono text-[10px] text-emerald-600 font-bold uppercase tracking-wider block">
-                          ✓ Image Attached
+                  {/* Selected Images Gallery */}
+                  {formImages.length > 0 ? (
+                    <div className="mt-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
+                          Selected Images ({formImages.length}) — First image is Primary Photo
                         </span>
-                        <p className="font-sans text-xs text-[#111111] font-semibold truncate mt-0.5">
-                          {fileName || (driveLinkInput ? 'Google Drive / Web Image' : 'Custom Image')}
-                        </p>
+                        {formImages.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setFormImages([])}
+                            className="font-mono text-[10px] text-red-600 hover:underline cursor-pointer"
+                          >
+                            Clear All
+                          </button>
+                        )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormImage('');
-                          setFileName('');
-                          setDriveLinkInput('');
-                        }}
-                        className="px-2 py-1 text-[10px] font-mono font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 cursor-pointer flex items-center space-x-1"
-                      >
-                        <X className="h-3 w-3" />
-                        <span>Remove</span>
-                      </button>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {formImages.map((imgUrl, idx) => (
+                          <div
+                            key={idx}
+                            className={`relative border p-1.5 bg-white flex flex-col justify-between transition-all ${
+                              idx === 0
+                                ? 'border-[#FF3B30] ring-1 ring-[#FF3B30]/30 shadow-xs'
+                                : 'border-[#E5E5E5] hover:border-neutral-400'
+                            }`}
+                          >
+                            <div className="relative aspect-4/3 bg-neutral-100 overflow-hidden mb-1.5 border border-neutral-200">
+                              <img
+                                src={imgUrl}
+                                alt={`Laptop photo ${idx + 1}`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = 'none';
+                                }}
+                              />
+                              {idx === 0 && (
+                                <span className="absolute top-1 left-1 bg-[#FF3B30] text-white text-[9px] font-mono font-bold px-1.5 py-0.5 shadow-xs flex items-center space-x-1">
+                                  <Star className="h-2.5 w-2.5 fill-white" />
+                                  <span>Primary</span>
+                                </span>
+                              )}
+                              <span className="absolute bottom-1 right-1 bg-black/70 text-white font-mono text-[9px] px-1 py-0.5 rounded-none">
+                                #{idx + 1}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-1 border-t border-neutral-100">
+                              {idx > 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMakePrimaryImage(idx)}
+                                  className="text-[9px] font-mono font-bold text-neutral-700 hover:text-[#FF3B30] underline cursor-pointer"
+                                  title="Set as main thumbnail image"
+                                >
+                                  Make Primary
+                                </button>
+                              ) : (
+                                <span className="text-[9px] font-mono text-emerald-600 font-bold">
+                                  Main Thumbnail
+                                </span>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveImage(idx)}
+                                className="p-1 text-neutral-400 hover:text-red-600 cursor-pointer"
+                                title="Remove this image"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ) : (
-                    <div className="mt-2 text-[10px] font-mono text-neutral-400 bg-neutral-50 p-1.5 border border-dashed border-[#E5E5E5]">
-                      ℹ️ If left blank, default brand photo placeholder will be assigned on save.
+                    <div className="mt-2 text-[10px] font-mono text-neutral-400 bg-neutral-50 p-2 border border-dashed border-[#E5E5E5] text-center">
+                      ℹ️ No images uploaded yet. You can select multiple image files or add multiple Google Drive links. If left blank, a default brand image will be used.
                     </div>
                   )}
                 </div>
