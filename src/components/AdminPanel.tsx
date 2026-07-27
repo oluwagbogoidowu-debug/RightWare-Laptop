@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { CustomSelect } from './CustomSelect';
 import { Laptop, LaptopCondition, LaptopSpecs } from '../types';
 import { saveLaptopToFirestore, deleteLaptopFromFirestore } from '../lib/firebaseService';
 import { formatNaira, convertGoogleDriveUrl } from '../lib/utils';
@@ -38,7 +39,8 @@ import {
   HardDrive,
   ExternalLink,
   Image as ImageIcon,
-  Star
+  Star,
+  Edit3
 } from 'lucide-react';
 
 export const GPU_OPTIONS = [
@@ -457,6 +459,123 @@ export default function AdminPanel({
   const [formSerial, setFormSerial] = useState('');
   const [formInspection, setFormInspection] = useState(true);
   const [formForSale, setFormForSale] = useState(true);
+
+  // Edit Laptop Modal State
+  const [editingLaptop, setEditingLaptop] = useState<Laptop | null>(null);
+  const [editForm, setEditForm] = useState<Partial<Laptop>>({});
+  const [editImages, setEditImages] = useState<string[]>([]);
+  const [editDriveInput, setEditDriveInput] = useState<string>('');
+
+  const handleStartEdit = (laptop: Laptop) => {
+    setEditingLaptop(laptop);
+    setEditForm({ ...laptop });
+    const existingImgs = laptop.additionalImages?.length ? laptop.additionalImages : (laptop.image ? [laptop.image] : []);
+    setEditImages(existingImgs);
+    setEditDriveInput('');
+  };
+
+  const handleEditFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newImages: string[] = [];
+    const filesArray = Array.from(files) as File[];
+    let processed = 0;
+
+    filesArray.forEach((file) => {
+      if (file.size > 8 * 1024 * 1024) {
+        triggerNotification(`Skipped ${file.name}: File exceeds 8MB.`);
+        processed++;
+        if (processed === filesArray.length && newImages.length > 0) {
+          setEditImages((prev) => [...prev, ...newImages]);
+        }
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (reader.result) {
+          newImages.push(reader.result as string);
+        }
+        processed++;
+        if (processed === filesArray.length) {
+          setEditImages((prev) => [...prev, ...newImages]);
+          triggerNotification(`Added ${newImages.length} image(s).`);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    e.target.value = '';
+  };
+
+  const handleAddEditDriveUrl = () => {
+    if (!editDriveInput.trim()) return;
+    const rawInput = editDriveInput.trim();
+    const links = rawInput.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+    const convertedLinks = links.map(convertGoogleDriveUrl);
+
+    if (convertedLinks.length > 0) {
+      setEditImages((prev) => [...prev, ...convertedLinks]);
+      setEditDriveInput('');
+      triggerNotification(`Added ${convertedLinks.length} image link(s).`);
+    }
+  };
+
+  const handleSaveEditLaptop = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLaptop) return;
+
+    const defaultImages = {
+      Apple: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=800&q=80',
+      Lenovo: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=800&q=80',
+      Dell: 'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&w=800&q=80',
+      HP: 'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?auto=format&fit=crop&w=800&q=80'
+    };
+
+    const fallbackImg = defaultImages[(editForm.brand || editingLaptop.brand) as keyof typeof defaultImages] || defaultImages.Dell;
+    const primaryImg = editImages.length > 0 ? editImages[0] : fallbackImg;
+    const allImgs = editImages.length > 0 ? editImages : [fallbackImg];
+
+    const updatedLaptop: Laptop = {
+      ...editingLaptop,
+      name: editForm.name || editingLaptop.name,
+      brand: editForm.brand || editingLaptop.brand,
+      price: Number(editForm.price ?? editingLaptop.price),
+      originalPrice: editForm.originalPrice ? Number(editForm.originalPrice) : undefined,
+      condition: (editForm.condition as LaptopCondition) || editingLaptop.condition,
+      batteryHealth: Number(editForm.batteryHealth ?? editingLaptop.batteryHealth),
+      batteryNote: editForm.batteryNote || editingLaptop.batteryNote,
+      specs: {
+        cpu: editForm.specs?.cpu || editingLaptop.specs.cpu,
+        ram: editForm.specs?.ram || editingLaptop.specs.ram,
+        storage: editForm.specs?.storage || editingLaptop.specs.storage,
+        screen: editForm.specs?.screen || editingLaptop.specs.screen,
+        graphics: editForm.specs?.graphics || editingLaptop.specs.graphics
+      },
+      image: primaryImg,
+      additionalImages: allImgs,
+      stockCount: Number(editForm.stockCount ?? editingLaptop.stockCount),
+      useCategory: editForm.useCategory || editingLaptop.useCategory,
+      description: editForm.description || editingLaptop.description,
+      serialNumber: editForm.serialNumber || editingLaptop.serialNumber,
+      inspectionPassed: editForm.inspectionPassed ?? editingLaptop.inspectionPassed,
+      isForSale: editForm.isForSale ?? editingLaptop.isForSale
+    };
+
+    try {
+      setIsSubmitting(true);
+      await saveLaptopToFirestore(updatedLaptop);
+      const updatedList = laptops.map((l) => (l.id === updatedLaptop.id ? updatedLaptop : l));
+      onUpdateLaptops(updatedList);
+      triggerNotification(`Updated & synced ${updatedLaptop.name} images in Firestore database!`);
+      setEditingLaptop(null);
+    } catch (err) {
+      console.error('Error updating laptop:', err);
+      triggerNotification('Failed to update laptop in database.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Success Notification
   const [notification, setNotification] = useState<string | null>(null);
@@ -1019,13 +1138,22 @@ export default function AdminPanel({
                         </button>
                       </td>
                       <td className="p-4 text-right">
-                        <button
-                          onClick={() => handleDeleteLaptop(laptop.id)}
-                          className="p-1.5 text-neutral-400 hover:text-[#FF3B30] border border-transparent hover:border-red-100 rounded-none cursor-pointer transition-all"
-                          title="Delete product listing"
-                        >
-                          <Trash2 className="h-4.5 w-4.5" />
-                        </button>
+                        <div className="flex items-center justify-end space-x-1">
+                          <button
+                            onClick={() => handleStartEdit(laptop)}
+                            className="p-1.5 text-neutral-600 hover:text-[#FF3B30] hover:bg-neutral-100 border border-neutral-200 rounded-none cursor-pointer transition-all"
+                            title="Edit listing & images stored in database"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteLaptop(laptop.id)}
+                            className="p-1.5 text-neutral-400 hover:text-[#FF3B30] border border-transparent hover:border-red-100 rounded-none cursor-pointer transition-all"
+                            title="Delete product listing"
+                          >
+                            <Trash2 className="h-4.5 w-4.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1077,41 +1205,15 @@ export default function AdminPanel({
                 </div>
 
                 <div>
-                  <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
-                    Brand *
-                  </label>
-                  <select
-                    value={BRAND_OPTIONS.includes(formBrand) ? formBrand : (formBrand ? 'Custom' : '')}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === 'Custom') {
-                        if (BRAND_OPTIONS.includes(formBrand)) {
-                          setFormBrand('');
-                        }
-                      } else {
-                        setFormBrand(val);
-                      }
-                    }}
-                    className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
-                  >
-                    <option value="">-- Select Brand --</option>
-                    {BRAND_OPTIONS.map((b) => (
-                      <option key={b} value={b}>
-                        {b}
-                      </option>
-                    ))}
-                    <option value="Custom">Custom / Other Brand...</option>
-                  </select>
-
-                  {(!BRAND_OPTIONS.includes(formBrand) || formBrand === '') && (
-                    <input
-                      type="text"
-                      value={formBrand}
-                      onChange={(e) => setFormBrand(e.target.value)}
-                      placeholder="Type custom brand name..."
-                      className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111] mt-2"
-                    />
-                  )}
+                  <CustomSelect
+                    label="Brand"
+                    required
+                    value={formBrand}
+                    options={BRAND_OPTIONS}
+                    onChange={setFormBrand}
+                    placeholder="-- Select Brand --"
+                    customPlaceholder="Type custom brand name..."
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -1157,41 +1259,15 @@ export default function AdminPanel({
                   </div>
 
                   <div>
-                    <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
-                      Primary Use Case *
-                    </label>
-                    <select
-                      value={USE_CASE_OPTIONS.includes(formCategory) ? formCategory : (formCategory ? 'Custom' : '')}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === 'Custom') {
-                          if (USE_CASE_OPTIONS.includes(formCategory)) {
-                            setFormCategory('');
-                          }
-                        } else {
-                          setFormCategory(val);
-                        }
-                      }}
-                      className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
-                    >
-                      <option value="">-- Select Primary Use Case --</option>
-                      {USE_CASE_OPTIONS.map((uc) => (
-                        <option key={uc} value={uc}>
-                          {uc}
-                        </option>
-                      ))}
-                      <option value="Custom">Custom / Other Use Case...</option>
-                    </select>
-
-                    {(!USE_CASE_OPTIONS.includes(formCategory) || formCategory === '') && (
-                      <input
-                        type="text"
-                        value={formCategory}
-                        onChange={(e) => setFormCategory(e.target.value)}
-                        placeholder="Type custom use case..."
-                        className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111] mt-2"
-                      />
-                    )}
+                    <CustomSelect
+                      label="Primary Use Case"
+                      required
+                      value={formCategory}
+                      options={USE_CASE_OPTIONS}
+                      onChange={setFormCategory}
+                      placeholder="-- Select Primary Use Case --"
+                      customPlaceholder="Type custom use case..."
+                    />
                   </div>
                 </div>
               </div>
@@ -1204,18 +1280,15 @@ export default function AdminPanel({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
-                      Condition *
-                    </label>
-                    <select
+                    <CustomSelect
+                      label="Condition"
+                      required
                       value={formCondition}
-                      onChange={(e) => setFormCondition(e.target.value as LaptopCondition)}
-                      className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
-                    >
-                      <option value="Very Clean">Very Clean</option>
-                      <option value="Clean">Clean</option>
-                      <option value="Good">Good</option>
-                    </select>
+                      options={['Very Clean', 'Clean', 'Good']}
+                      onChange={(val) => setFormCondition(val as LaptopCondition)}
+                      placeholder="Select condition"
+                      allowCustom={false}
+                    />
                   </div>
 
                   <div>
@@ -1476,161 +1549,53 @@ export default function AdminPanel({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
-                      RAM Size *
-                    </label>
-                    <select
-                      value={RAM_OPTIONS.includes(formRam) ? formRam : (formRam ? 'Custom' : '')}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === 'Custom') {
-                          if (RAM_OPTIONS.includes(formRam)) {
-                            setFormRam('');
-                          }
-                        } else {
-                          setFormRam(val);
-                        }
-                      }}
-                      className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
-                    >
-                      <option value="">-- Select RAM --</option>
-                      {RAM_OPTIONS.map((ram) => (
-                        <option key={ram} value={ram}>
-                          {ram}
-                        </option>
-                      ))}
-                      <option value="Custom">Custom / Other RAM...</option>
-                    </select>
-
-                    {(!RAM_OPTIONS.includes(formRam) || formRam === '') && (
-                      <input
-                        type="text"
-                        value={formRam}
-                        onChange={(e) => setFormRam(e.target.value)}
-                        placeholder="Type custom RAM size..."
-                        className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111] mt-2"
-                      />
-                    )}
+                    <CustomSelect
+                      label="RAM Size"
+                      required
+                      value={formRam}
+                      options={RAM_OPTIONS}
+                      onChange={setFormRam}
+                      placeholder="-- Select RAM --"
+                      customPlaceholder="Type custom RAM size..."
+                    />
                   </div>
 
                   <div>
-                    <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
-                      SSD / Storage *
-                    </label>
-                    <select
-                      value={STORAGE_OPTIONS.includes(formStorage) ? formStorage : (formStorage ? 'Custom' : '')}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === 'Custom') {
-                          if (STORAGE_OPTIONS.includes(formStorage)) {
-                            setFormStorage('');
-                          }
-                        } else {
-                          setFormStorage(val);
-                        }
-                      }}
-                      className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
-                    >
-                      <option value="">-- Select Storage --</option>
-                      {STORAGE_OPTIONS.map((st) => (
-                        <option key={st} value={st}>
-                          {st}
-                        </option>
-                      ))}
-                      <option value="Custom">Custom / Other Storage...</option>
-                    </select>
-
-                    {(!STORAGE_OPTIONS.includes(formStorage) || formStorage === '') && (
-                      <input
-                        type="text"
-                        value={formStorage}
-                        onChange={(e) => setFormStorage(e.target.value)}
-                        placeholder="Type custom storage size..."
-                        className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111] mt-2"
-                      />
-                    )}
+                    <CustomSelect
+                      label="SSD / Storage"
+                      required
+                      value={formStorage}
+                      options={STORAGE_OPTIONS}
+                      onChange={setFormStorage}
+                      placeholder="-- Select Storage --"
+                      customPlaceholder="Type custom storage size..."
+                    />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
-                      Screen Display *
-                    </label>
-                    <select
-                      value={SCREEN_OPTIONS.includes(formScreen) ? formScreen : (formScreen ? 'Custom' : '')}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === 'Custom') {
-                          if (SCREEN_OPTIONS.includes(formScreen)) {
-                            setFormScreen('');
-                          }
-                        } else {
-                          setFormScreen(val);
-                        }
-                      }}
-                      className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
-                    >
-                      <option value="">-- Select Screen Display --</option>
-                      {SCREEN_OPTIONS.map((scr) => (
-                        <option key={scr} value={scr}>
-                          {scr}
-                        </option>
-                      ))}
-                      <option value="Custom">Custom / Other Display...</option>
-                    </select>
-
-                    {(!SCREEN_OPTIONS.includes(formScreen) || formScreen === '') && (
-                      <input
-                        type="text"
-                        value={formScreen}
-                        onChange={(e) => setFormScreen(e.target.value)}
-                        placeholder="Type custom display specification..."
-                        className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111] mt-2"
-                      />
-                    )}
+                    <CustomSelect
+                      label="Screen Display"
+                      required
+                      value={formScreen}
+                      options={SCREEN_OPTIONS}
+                      onChange={setFormScreen}
+                      placeholder="-- Select Screen Display --"
+                      customPlaceholder="Type custom display specification..."
+                    />
                   </div>
 
                   <div>
-                    <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
-                      Graphics Card *
-                    </label>
-                    <select
-                      value={ALL_PRESET_GPUS.includes(formGraphics) ? formGraphics : (formGraphics ? 'Custom' : '')}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === 'Custom') {
-                          if (ALL_PRESET_GPUS.includes(formGraphics)) {
-                            setFormGraphics('');
-                          }
-                        } else {
-                          setFormGraphics(val);
-                        }
-                      }}
-                      className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
-                    >
-                      <option value="">-- Select Graphics Card --</option>
-                      {GPU_OPTIONS.map((group) => (
-                        <optgroup key={group.group} label={group.group}>
-                          {group.options.map((gpu) => (
-                            <option key={gpu} value={gpu}>
-                              {gpu}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                      <option value="Custom">Custom / Other Graphics Card...</option>
-                    </select>
-
-                    {(!ALL_PRESET_GPUS.includes(formGraphics) || formGraphics === '') && (
-                      <input
-                        type="text"
-                        value={formGraphics}
-                        onChange={(e) => setFormGraphics(e.target.value)}
-                        placeholder="Type custom graphics card name..."
-                        className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111] mt-2"
-                      />
-                    )}
+                    <CustomSelect
+                      label="Graphics Card"
+                      required
+                      value={formGraphics}
+                      options={ALL_PRESET_GPUS}
+                      onChange={setFormGraphics}
+                      placeholder="-- Select Graphics Card --"
+                      customPlaceholder="Type custom graphics card..."
+                    />
                   </div>
                 </div>
 
@@ -1742,6 +1707,367 @@ export default function AdminPanel({
                   No sold archive found.
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* EDIT LAPTOP MODAL */}
+        {editingLaptop && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-white border border-[#111111] max-w-4xl w-full my-8 p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto relative shadow-2xl">
+              
+              {/* Header */}
+              <div className="flex items-start justify-between border-b border-[#E5E5E5] pb-4">
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-mono text-[10px] text-[#FF3B30] uppercase font-bold tracking-widest flex items-center space-x-1">
+                      <Edit3 className="h-3.5 w-3.5" />
+                      <span>Editing Listing & Database Images</span>
+                    </span>
+                    <span className="inline-flex items-center space-x-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 border border-emerald-200 font-mono text-[9px] font-bold">
+                      <Database className="h-3 w-3 text-emerald-600" />
+                      <span>Firestore Sync</span>
+                    </span>
+                  </div>
+                  <h2 className="font-display font-bold text-lg text-[#111111] mt-1">
+                    {editingLaptop.name}
+                  </h2>
+                  <p className="font-mono text-[11px] text-neutral-500 mt-0.5">
+                    S/N: {editingLaptop.serialNumber} • ID: {editingLaptop.id}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingLaptop(null)}
+                  className="p-2 text-neutral-400 hover:text-[#111111] hover:bg-neutral-100 transition-colors cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEditLaptop} className="space-y-6">
+                
+                {/* Section 1: Core details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#FAF9F9] p-4 border border-[#E5E5E5]">
+                  <div>
+                    <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
+                      Model Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editForm.name || ''}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                      className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
+                    />
+                  </div>
+
+                  <div>
+                    <CustomSelect
+                      label="Brand"
+                      required
+                      value={editForm.brand || 'Apple'}
+                      options={BRAND_OPTIONS}
+                      onChange={(val) => setEditForm((prev) => ({ ...prev, brand: val }))}
+                      placeholder="-- Select Brand --"
+                      customPlaceholder="Type custom brand name..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
+                      Selling Price (₦) *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={editForm.price ?? 0}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, price: Number(e.target.value) }))}
+                      className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
+                      Original Price / Market Price (₦)
+                    </label>
+                    <input
+                      type="number"
+                      value={editForm.originalPrice ?? ''}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, originalPrice: Number(e.target.value) }))}
+                      className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
+                    />
+                  </div>
+
+                  <div>
+                    <CustomSelect
+                      label="Condition Grade"
+                      required
+                      value={editForm.condition || 'Very Clean'}
+                      options={['Very Clean', 'Clean', 'Good']}
+                      onChange={(val) => setEditForm((prev) => ({ ...prev, condition: val as LaptopCondition }))}
+                      placeholder="-- Select Condition --"
+                      allowCustom={false}
+                    />
+                  </div>
+
+                  <div>
+                    <CustomSelect
+                      label="Primary Use Case"
+                      required
+                      value={editForm.useCategory || 'Business / Office Work'}
+                      options={USE_CASE_OPTIONS}
+                      onChange={(val) => setEditForm((prev) => ({ ...prev, useCategory: val }))}
+                      placeholder="-- Select Primary Use Case --"
+                      customPlaceholder="Type custom use case..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
+                      Stock Count Remaining *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={0}
+                      value={editForm.stockCount ?? 1}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, stockCount: Number(e.target.value) }))}
+                      className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
+                      Serial Number (S/N) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editForm.serialNumber || ''}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, serialNumber: e.target.value }))}
+                      className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
+                    />
+                  </div>
+                </div>
+
+                {/* Section 2: Specs */}
+                <div className="space-y-3 bg-[#FAF9F9] p-4 border border-[#E5E5E5]">
+                  <h3 className="font-mono text-[10px] text-neutral-500 uppercase tracking-wider font-bold">
+                    Hardware Specifications
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
+                        CPU Processor *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={editForm.specs?.cpu || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setEditForm((prev) => ({
+                            ...prev,
+                            specs: { ...(prev.specs || editForm.specs || { cpu: '', ram: '', storage: '', screen: '', graphics: '' }), cpu: val }
+                          }));
+                        }}
+                        placeholder="e.g. Apple M2 Pro or i7-12700H"
+                        className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
+                      />
+                    </div>
+
+                    <div>
+                      <CustomSelect
+                        label="RAM Size"
+                        required
+                        value={editForm.specs?.ram || ''}
+                        options={RAM_OPTIONS}
+                        onChange={(val) => setEditForm((prev) => ({
+                          ...prev,
+                          specs: { ...(prev.specs || editForm.specs || { cpu: '', ram: '', storage: '', screen: '', graphics: '' }), ram: val }
+                        }))}
+                        placeholder="-- Select RAM --"
+                        customPlaceholder="Type custom RAM size..."
+                      />
+                    </div>
+
+                    <div>
+                      <CustomSelect
+                        label="SSD / Storage"
+                        required
+                        value={editForm.specs?.storage || ''}
+                        options={STORAGE_OPTIONS}
+                        onChange={(val) => setEditForm((prev) => ({
+                          ...prev,
+                          specs: { ...(prev.specs || editForm.specs || { cpu: '', ram: '', storage: '', screen: '', graphics: '' }), storage: val }
+                        }))}
+                        placeholder="-- Select Storage --"
+                        customPlaceholder="Type custom storage size..."
+                      />
+                    </div>
+
+                    <div>
+                      <CustomSelect
+                        label="Screen Display"
+                        required
+                        value={editForm.specs?.screen || ''}
+                        options={SCREEN_OPTIONS}
+                        onChange={(val) => setEditForm((prev) => ({
+                          ...prev,
+                          specs: { ...(prev.specs || editForm.specs || { cpu: '', ram: '', storage: '', screen: '', graphics: '' }), screen: val }
+                        }))}
+                        placeholder="-- Select Display --"
+                        customPlaceholder="Type custom display specification..."
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Database Image Manager */}
+                <div className="space-y-3 border border-[#E5E5E5] p-4 bg-white">
+                  <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-2">
+                    <div>
+                      <h3 className="font-mono text-[11px] text-[#111111] uppercase tracking-wider font-bold flex items-center space-x-1.5">
+                        <Database className="h-3.5 w-3.5 text-[#FF3B30]" />
+                        <span>Database Product Images Manager</span>
+                      </h3>
+                      <p className="font-sans text-[11px] text-neutral-500 mt-0.5">
+                        Upload image files directly or paste Google Drive links. All images persist in Firestore!
+                      </p>
+                    </div>
+                    <span className="font-mono text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 border border-emerald-200 font-bold">
+                      {editImages.length} Image(s) Attached
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Upload Files */}
+                    <div className="relative border-2 border-dashed border-[#CBD5E1] hover:border-[#111111] p-3 text-center bg-neutral-50/50 cursor-pointer transition-colors group">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleEditFileUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      />
+                      <div className="flex flex-col items-center justify-center space-y-1">
+                        <Upload className="h-5 w-5 text-[#FF3B30] group-hover:scale-110 transition-transform" />
+                        <span className="font-sans text-xs font-bold text-[#111111]">
+                          Click or Drag Image Files
+                        </span>
+                        <span className="font-mono text-[9px] text-neutral-400">
+                          Auto-encoded and stored in database document
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Drive Link Input */}
+                    <div className="space-y-1.5 flex flex-col justify-center bg-neutral-50/50 p-3 border border-[#E5E5E5]">
+                      <span className="font-mono text-[10px] text-neutral-600 font-bold uppercase">
+                        Or Add Google Drive Share Links
+                      </span>
+                      <div className="flex space-x-1.5">
+                        <input
+                          type="url"
+                          value={editDriveInput}
+                          onChange={(e) => setEditDriveInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddEditDriveUrl();
+                            }
+                          }}
+                          placeholder="Paste Google Drive link..."
+                          className="flex-1 bg-white border border-[#E5E5E5] px-2.5 py-1.5 font-sans text-xs text-[#111111]"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddEditDriveUrl}
+                          className="px-3 py-1.5 bg-[#111111] hover:bg-[#222222] text-white font-mono text-xs font-bold shrink-0 cursor-pointer"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Image Gallery Grid */}
+                  {editImages.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-3">
+                      {editImages.map((img, idx) => (
+                        <div
+                          key={idx}
+                          className={`relative border p-1.5 bg-white flex flex-col justify-between ${
+                            idx === 0 ? 'border-[#FF3B30] ring-1 ring-[#FF3B30]/30' : 'border-[#E5E5E5]'
+                          }`}
+                        >
+                          <div className="relative aspect-4/3 bg-neutral-100 overflow-hidden mb-1 border border-neutral-200">
+                            <img
+                              src={img}
+                              alt={`Product photo ${idx + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            {idx === 0 && (
+                              <span className="absolute top-1 left-1 bg-[#FF3B30] text-white text-[8px] font-mono font-bold px-1.5 py-0.5 shadow-xs flex items-center space-x-0.5">
+                                <Star className="h-2 w-2 fill-white" />
+                                <span>Primary</span>
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between space-x-1 text-[9px] font-mono">
+                            {idx !== 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const selected = editImages[idx];
+                                  const rest = editImages.filter((_, i) => i !== idx);
+                                  setEditImages([selected, ...rest]);
+                                }}
+                                className="text-neutral-700 hover:text-[#FF3B30] underline cursor-pointer"
+                              >
+                                Set Primary
+                              </button>
+                            ) : (
+                              <span className="text-emerald-600 font-bold">Primary Photo</span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setEditImages((prev) => prev.filter((_, i) => i !== idx))}
+                              className="text-red-600 hover:text-red-800 p-0.5 cursor-pointer"
+                              title="Remove photo"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Submit Action Bar */}
+                <div className="flex items-center justify-between pt-4 border-t border-[#E5E5E5]">
+                  <button
+                    type="button"
+                    onClick={() => setEditingLaptop(null)}
+                    className="px-4 py-2 border border-[#E5E5E5] hover:bg-neutral-100 font-mono text-xs font-bold text-neutral-700 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-6 py-2.5 bg-[#FF3B30] hover:bg-[#D92D20] text-white font-mono text-xs font-bold uppercase tracking-wider flex items-center space-x-2 cursor-pointer transition-colors shadow-xs"
+                  >
+                    <Database className="h-4 w-4" />
+                    <span>{isSubmitting ? 'Saving to Database...' : 'Save Changes & Sync Database'}</span>
+                  </button>
+                </div>
+
+              </form>
             </div>
           </div>
         )}

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Laptop, FilterState, LaptopCondition } from '../types';
-import { Search, RotateCcw, AlertTriangle, ShieldCheck, Tag } from 'lucide-react';
+import { Search, RotateCcw, AlertTriangle, ShieldCheck, Tag, ChevronDown, Check } from 'lucide-react';
 import { formatNaira } from '../lib/utils';
+import { BRAND_OPTIONS, USE_CASE_OPTIONS } from './AdminPanel';
 
 interface ProductSectionProps {
   laptops: Laptop[];
@@ -9,6 +10,68 @@ interface ProductSectionProps {
   onUpdateFilters: (updates: Partial<FilterState>) => void;
   onResetFilters: () => void;
   onSelectLaptop: (laptop: Laptop) => void;
+}
+
+interface FilterDropdownProps {
+  label: string;
+  value: string;
+  options: { label: string; value: string }[];
+  onChange: (val: string) => void;
+}
+
+function FilterDropdown({ label, value, options, onChange }: FilterDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedLabel = options.find((o) => o.value === value)?.label || value;
+
+  return (
+    <div className="relative inline-block" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex items-center space-x-1.5 bg-white px-3 py-1.5 border border-[#E5E5E5] text-xs font-sans text-[#111111] hover:border-neutral-400 cursor-pointer transition-colors"
+      >
+        <span className="text-[#6B6B6B]">{label}:</span>
+        <span className="font-bold truncate max-w-[120px]">{selectedLabel}</span>
+        <ChevronDown className={`h-3.5 w-3.5 text-neutral-500 transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180 text-[#FF3B30]' : ''}`} />
+      </button>
+
+      {/* Downward Dropdown Menu inside layout flow */}
+      {isOpen && (
+        <div className="absolute left-0 top-full mt-1 w-56 bg-white border border-[#111111] shadow-xl z-40 max-h-64 overflow-y-auto py-1 divide-y divide-neutral-100">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between cursor-pointer transition-colors ${
+                value === opt.value
+                  ? 'bg-neutral-100 font-bold text-[#111111]'
+                  : 'hover:bg-neutral-50 text-neutral-700'
+              }`}
+            >
+              <span className="truncate">{opt.label}</span>
+              {value === opt.value && <Check className="h-3.5 w-3.5 text-[#FF3B30] shrink-0 ml-2" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ProductSection({
@@ -74,51 +137,40 @@ export default function ProductSection({
           <div className="flex flex-wrap items-center gap-2">
             
             {/* Brand Filter */}
-            <div className="flex items-center space-x-1.5 bg-white px-3 py-1.5 border border-[#E5E5E5] text-xs">
-              <span className="text-[#6B6B6B]">Brand:</span>
-              <select
-                value={filters.brand}
-                onChange={(e) => onUpdateFilters({ brand: e.target.value as any })}
-                className="font-sans font-bold text-[#111111] focus:outline-hidden bg-transparent"
-              >
-                <option value="all">All Brands</option>
-                <option value="Apple">Apple</option>
-                <option value="Lenovo">Lenovo</option>
-                <option value="Dell">Dell</option>
-                <option value="HP">HP</option>
-              </select>
-            </div>
+            <FilterDropdown
+              label="Brand"
+              value={filters.brand}
+              options={[
+                { label: 'All Brands', value: 'all' },
+                ...BRAND_OPTIONS.map((b) => ({ label: b, value: b }))
+              ]}
+              onChange={(val) => onUpdateFilters({ brand: val as any })}
+            />
 
             {/* Use Filter */}
-            <div className="flex items-center space-x-1.5 bg-white px-3 py-1.5 border border-[#E5E5E5] text-xs">
-              <span className="text-[#6B6B6B]">Use:</span>
-              <select
-                value={filters.use}
-                onChange={(e) => onUpdateFilters({ use: e.target.value as any })}
-                className="font-sans font-bold text-[#111111] focus:outline-hidden bg-transparent"
-              >
-                <option value="all">All Uses</option>
-                <option value="School">School</option>
-                <option value="Work">Work</option>
-                <option value="Design">Design</option>
-              </select>
-            </div>
+            <FilterDropdown
+              label="Use"
+              value={filters.use}
+              options={[
+                { label: 'All Uses', value: 'all' },
+                ...USE_CASE_OPTIONS.map((u) => ({ label: u, value: u }))
+              ]}
+              onChange={(val) => onUpdateFilters({ use: val as any })}
+            />
 
             {/* Budget Filter */}
-            <div className="flex items-center space-x-1.5 bg-white px-3 py-1.5 border border-[#E5E5E5] text-xs">
-              <span className="text-[#6B6B6B]">Budget:</span>
-              <select
-                value={filters.budget}
-                onChange={(e) => onUpdateFilters({ budget: e.target.value as any })}
-                className="font-sans font-bold text-[#111111] focus:outline-hidden bg-transparent"
-              >
-                <option value="all">Any Budget</option>
-                <option value="under-400">Under ₦400,000</option>
-                <option value="400-700">₦400,000 - ₦700,000</option>
-                <option value="700-1000">₦700,000 - ₦1,000,000</option>
-                <option value="above-1000">Above ₦1,000,000</option>
-              </select>
-            </div>
+            <FilterDropdown
+              label="Budget"
+              value={filters.budget}
+              options={[
+                { label: 'Any Budget', value: 'all' },
+                { label: 'Under ₦400,000', value: 'under-400' },
+                { label: '₦400,000 - ₦700,000', value: '400-700' },
+                { label: '₦700,000 - ₦1,000,000', value: '700-1000' },
+                { label: 'Above ₦1,000,000', value: 'above-1000' }
+              ]}
+              onChange={(val) => onUpdateFilters({ budget: val as any })}
+            />
 
           </div>
 
