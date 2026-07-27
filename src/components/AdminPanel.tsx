@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Laptop, LaptopCondition, LaptopSpecs } from '../types';
 import { saveLaptopToFirestore, deleteLaptopFromFirestore } from '../lib/firebaseService';
-import { formatNaira } from '../lib/utils';
+import { formatNaira, convertGoogleDriveUrl } from '../lib/utils';
 import { auth, googleProvider, ALLOWED_ADMIN_EMAILS } from '../firebase';
 import { 
   signInWithPopup, 
@@ -33,7 +33,11 @@ import {
   Mail,
   Lock,
   UserPlus,
-  LogIn
+  LogIn,
+  Upload,
+  HardDrive,
+  ExternalLink,
+  Image as ImageIcon
 } from 'lucide-react';
 
 export const GPU_OPTIONS = [
@@ -344,6 +348,31 @@ export default function AdminPanel({
   const [formScreen, setFormScreen] = useState('14" Retina Display');
   const [formGraphics, setFormGraphics] = useState('Intel Iris Xe Graphics');
   const [formImage, setFormImage] = useState('');
+  const [imageSourceMode, setImageSourceMode] = useState<'file' | 'drive'>('file');
+  const [fileName, setFileName] = useState<string>('');
+  const [driveLinkInput, setDriveLinkInput] = useState<string>('');
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 8 * 1024 * 1024) {
+        triggerNotification('Selected file is too large (max 8MB).');
+        return;
+      }
+      setFileName(file.name);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDriveUrlChange = (url: string) => {
+    setDriveLinkInput(url);
+    const converted = convertGoogleDriveUrl(url);
+    setFormImage(converted);
+  };
   const [formStock, setFormStock] = useState(1);
   const [formCategory, setFormCategory] = useState<'School' | 'Work' | 'Design'>('Work');
   const [formDescription, setFormDescription] = useState('');
@@ -420,6 +449,8 @@ export default function AdminPanel({
       setFormSerial('');
       setFormDescription('');
       setFormImage('');
+      setFileName('');
+      setDriveLinkInput('');
       setFormStock(1);
       setActiveTab('inventory');
     } catch (error) {
@@ -1123,15 +1154,128 @@ export default function AdminPanel({
 
                 <div>
                   <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
-                    Image URL (Leave blank for default placeholder)
+                    Laptop Image
                   </label>
-                  <input
-                    type="url"
-                    value={formImage}
-                    onChange={(e) => setFormImage(e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
-                    className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
-                  />
+
+                  {/* Mode Selector */}
+                  <div className="flex border border-[#E5E5E5] p-0.5 bg-neutral-50 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setImageSourceMode('file')}
+                      className={`flex-1 py-1.5 px-2 font-mono text-[11px] font-bold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer ${
+                        imageSourceMode === 'file'
+                          ? 'bg-white text-[#111111] shadow-2xs border border-[#E5E5E5]'
+                          : 'text-neutral-500 hover:text-neutral-800'
+                      }`}
+                    >
+                      <Upload className="h-3.5 w-3.5 text-[#FF3B30]" />
+                      <span>Pick from My Files</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImageSourceMode('drive')}
+                      className={`flex-1 py-1.5 px-2 font-mono text-[11px] font-bold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer ${
+                        imageSourceMode === 'drive'
+                          ? 'bg-white text-[#111111] shadow-2xs border border-[#E5E5E5]'
+                          : 'text-neutral-500 hover:text-neutral-800'
+                      }`}
+                    >
+                      <HardDrive className="h-3.5 w-3.5 text-blue-600" />
+                      <span>Google Drive / Web Link</span>
+                    </button>
+                  </div>
+
+                  {/* Mode 1: File Upload */}
+                  {imageSourceMode === 'file' && (
+                    <div className="space-y-1.5">
+                      <div className="relative border-2 border-dashed border-[#CBD5E1] hover:border-[#111111] transition-colors p-3.5 text-center bg-white cursor-pointer group">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileUpload}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        />
+                        <div className="flex flex-col items-center justify-center space-y-1">
+                          <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center group-hover:scale-105 transition-transform">
+                            <Upload className="h-4 w-4 text-[#FF3B30]" />
+                          </div>
+                          <div>
+                            <p className="font-sans text-xs font-bold text-[#111111]">
+                              Click or Drag & Drop Image File
+                            </p>
+                            <p className="font-mono text-[10px] text-neutral-400 mt-0.5">
+                              Supports PNG, JPG, WEBP, GIF (Max 8MB)
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mode 2: Google Drive / Web Link */}
+                  {imageSourceMode === 'drive' && (
+                    <div className="space-y-1.5">
+                      <div className="relative">
+                        <input
+                          type="url"
+                          value={driveLinkInput}
+                          onChange={(e) => handleDriveUrlChange(e.target.value)}
+                          placeholder="Paste Google Drive share link (e.g. https://drive.google.com/file/d/...)"
+                          className="w-full bg-white border border-[#E5E5E5] px-3 py-2 pr-24 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
+                        />
+                        <a
+                          href="https://drive.google.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute right-1 top-1 bottom-1 px-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-mono text-[10px] font-bold flex items-center space-x-1 border border-neutral-300"
+                        >
+                          <span>Open Drive</span>
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                      <p className="font-mono text-[10px] text-neutral-500 bg-neutral-50 p-2 border border-neutral-200 leading-tight">
+                        💡 Set Google Drive sharing to <strong>"Anyone with the link"</strong> then paste link here. It converts automatically into a direct display image.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Selected Image Preview */}
+                  {formImage ? (
+                    <div className="mt-2.5 bg-neutral-50 border border-[#E5E5E5] p-2.5 flex items-center space-x-3">
+                      <img
+                        src={formImage}
+                        alt="Laptop preview"
+                        className="w-14 h-12 object-cover border border-[#CBD5E1] bg-white flex-shrink-0"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <span className="font-mono text-[10px] text-emerald-600 font-bold uppercase tracking-wider block">
+                          ✓ Image Attached
+                        </span>
+                        <p className="font-sans text-xs text-[#111111] font-semibold truncate mt-0.5">
+                          {fileName || (driveLinkInput ? 'Google Drive / Web Image' : 'Custom Image')}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormImage('');
+                          setFileName('');
+                          setDriveLinkInput('');
+                        }}
+                        className="px-2 py-1 text-[10px] font-mono font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 cursor-pointer flex items-center space-x-1"
+                      >
+                        <X className="h-3 w-3" />
+                        <span>Remove</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-2 text-[10px] font-mono text-neutral-400 bg-neutral-50 p-1.5 border border-dashed border-[#E5E5E5]">
+                      ℹ️ If left blank, default brand photo placeholder will be assigned on save.
+                    </div>
+                  )}
                 </div>
               </div>
 

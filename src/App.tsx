@@ -243,9 +243,7 @@ export default function App() {
                         </span>
                       </div>
 
-                      <p className="font-sans text-sm sm:text-base text-[#6B6B6B] leading-relaxed max-w-lg pt-1">
-                        Every single workstation is backed by our strict 45-point engineer audit and a documented battery report.
-                      </p>
+
                     </div>
 
                     {/* Combined CTA triggers */}
