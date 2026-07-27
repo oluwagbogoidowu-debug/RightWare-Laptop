@@ -66,13 +66,17 @@ export async function uploadToCloudinary(
     console.warn('Backend Cloudinary upload endpoint failed, trying direct signed upload:', backendErr);
   }
 
-  // Strategy 2: Direct signed upload to Cloudinary Edge API
+  // Strategy 2: Direct signed upload to Cloudinary Edge API via /api/sign-upload
   try {
-    const sigRes = await fetch('/api/cloudinary-signature', {
+    let sigRes = await fetch('/api/sign-upload', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ folder, publicId })
     });
+
+    if (!sigRes.ok) {
+      sigRes = await fetch('/api/sign-upload?folder=' + encodeURIComponent(folder));
+    }
 
     if (!sigRes.ok) {
       throw new Error(`Failed to obtain Cloudinary upload signature (status ${sigRes.status})`);

@@ -112,37 +112,73 @@ async function startServer() {
     }
   });
 
-  // API Route: Generate Signed Upload Parameters (for direct client uploads)
-  app.post('/api/cloudinary-signature', (req, res) => {
+  // API Route: Sign Upload Signature (GET & POST)
+  app.get('/api/sign-upload', (req, res) => {
     try {
-      const { folder = 'rightware_laptops', publicId } = req.body;
-      const timestamp = Math.round(new Date().getTime() / 1000);
+      const timestamp = Math.round(Date.now() / 1000);
+      const folder = (req.query.folder as string) || 'rightware_laptops';
+      const publicId = req.query.public_id as string;
 
-      const paramsToSign: Record<string, any> = {
-        timestamp: timestamp,
-        folder: folder
-      };
-
-      if (publicId && typeof publicId === 'string' && publicId.trim().length > 0) {
-        paramsToSign.public_id = publicId.trim();
+      const paramsToSign: Record<string, any> = { timestamp };
+      if (folder) paramsToSign.folder = folder;
+      if (publicId) {
+        paramsToSign.public_id = publicId;
         paramsToSign.overwrite = true;
       }
 
+      const activeSecret = process.env.CLOUDINARY_API_SECRET || creds.apiSecret;
+      const activeApiKey = process.env.CLOUDINARY_API_KEY || creds.apiKey;
+      const activeCloudName = process.env.CLOUDINARY_CLOUD_NAME || creds.cloudName;
+
       const signature = cloudinary.utils.api_sign_request(
         paramsToSign,
-        creds.apiSecret
+        activeSecret
       );
 
       return res.json({
-        signature,
         timestamp,
-        cloudName: creds.cloudName,
-        apiKey: creds.apiKey,
+        signature,
+        apiKey: activeApiKey,
+        cloudName: activeCloudName,
         folder
       });
     } catch (err: any) {
-      console.error('Cloudinary Signature Error:', err);
-      return res.status(500).json({ error: 'Failed to generate Cloudinary upload signature' });
+      console.error('Sign Upload Error:', err);
+      return res.status(500).json({ error: 'Failed to sign upload request' });
+    }
+  });
+
+  app.post('/api/sign-upload', (req, res) => {
+    try {
+      const timestamp = Math.round(Date.now() / 1000);
+      const { folder = 'rightware_laptops', publicId } = req.body || {};
+
+      const paramsToSign: Record<string, any> = { timestamp };
+      if (folder) paramsToSign.folder = folder;
+      if (publicId) {
+        paramsToSign.public_id = publicId;
+        paramsToSign.overwrite = true;
+      }
+
+      const activeSecret = process.env.CLOUDINARY_API_SECRET || creds.apiSecret;
+      const activeApiKey = process.env.CLOUDINARY_API_KEY || creds.apiKey;
+      const activeCloudName = process.env.CLOUDINARY_CLOUD_NAME || creds.cloudName;
+
+      const signature = cloudinary.utils.api_sign_request(
+        paramsToSign,
+        activeSecret
+      );
+
+      return res.json({
+        timestamp,
+        signature,
+        apiKey: activeApiKey,
+        cloudName: activeCloudName,
+        folder
+      });
+    } catch (err: any) {
+      console.error('Sign Upload Error:', err);
+      return res.status(500).json({ error: 'Failed to sign upload request' });
     }
   });
 
