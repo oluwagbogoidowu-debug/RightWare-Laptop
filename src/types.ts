@@ -12,7 +12,7 @@ export interface Laptop {
   id: string;
   name: string;
   brand: string;
-  year: number;
+  year?: number;
   price: number;
   originalPrice?: number;
   condition: LaptopCondition;
@@ -22,7 +22,7 @@ export interface Laptop {
   image: string;
   additionalImages: string[];
   stockCount: number;
-  useCategory: 'School' | 'Work' | 'Design';
+  useCategory: string;
   description: string;
   serialNumber: string;
   inspectionPassed: boolean;

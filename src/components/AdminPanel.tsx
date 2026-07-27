@@ -163,6 +163,46 @@ export const SCREEN_OPTIONS = [
   '17.3" 4K UHD Display'
 ];
 
+export const BRAND_OPTIONS = [
+  'Acer',
+  'Apple',
+  'ASUS',
+  'Dell',
+  'Dynabook',
+  'Fujitsu',
+  'Gigabyte',
+  'HP',
+  'Huawei',
+  'Infinix',
+  'LG',
+  'Lenovo',
+  'Microsoft',
+  'MSI',
+  'Razer',
+  'Samsung',
+  'Sony',
+  'Toshiba',
+  'VAIO',
+  'Xiaomi'
+];
+
+export const USE_CASE_OPTIONS = [
+  'Business / Office Work',
+  'Student / School Use',
+  'Programming / Development',
+  'UI/UX Design',
+  'Graphic Design',
+  'Video Editing',
+  '3D Modeling / Animation',
+  'Gaming',
+  'Streaming / Content Creation',
+  'Data Analysis',
+  'Machine Learning / AI',
+  'Cybersecurity / Networking',
+  'Music Production',
+  'General Everyday Use'
+];
+
 interface AdminPanelProps {
   laptops: Laptop[];
   soldLaptops: Laptop[];
@@ -336,7 +376,6 @@ export default function AdminPanel({
   // New Laptop Form State
   const [formName, setFormName] = useState('');
   const [formBrand, setFormBrand] = useState('Apple');
-  const [formYear, setFormYear] = useState(2021);
   const [formPrice, setFormPrice] = useState(600);
   const [formOriginalPrice, setFormOriginalPrice] = useState(1200);
   const [formCondition, setFormCondition] = useState<LaptopCondition>('Very Clean');
@@ -374,7 +413,7 @@ export default function AdminPanel({
     setFormImage(converted);
   };
   const [formStock, setFormStock] = useState(1);
-  const [formCategory, setFormCategory] = useState<'School' | 'Work' | 'Design'>('Work');
+  const [formCategory, setFormCategory] = useState<string>('Business / Office Work');
   const [formDescription, setFormDescription] = useState('');
   const [formSerial, setFormSerial] = useState('');
   const [formInspection, setFormInspection] = useState(true);
@@ -414,7 +453,7 @@ export default function AdminPanel({
       id: `lap-${Date.now()}`,
       name: formName,
       brand: formBrand,
-      year: Number(formYear),
+      year: new Date().getFullYear(),
       price: Number(formPrice),
       originalPrice: formOriginalPrice ? Number(formOriginalPrice) : undefined,
       condition: formCondition,
@@ -996,35 +1035,42 @@ export default function AdminPanel({
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
-                      Brand *
-                    </label>
-                    <select
+                <div>
+                  <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
+                    Brand *
+                  </label>
+                  <select
+                    value={BRAND_OPTIONS.includes(formBrand) ? formBrand : (formBrand ? 'Custom' : '')}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'Custom') {
+                        if (BRAND_OPTIONS.includes(formBrand)) {
+                          setFormBrand('');
+                        }
+                      } else {
+                        setFormBrand(val);
+                      }
+                    }}
+                    className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
+                  >
+                    <option value="">-- Select Brand --</option>
+                    {BRAND_OPTIONS.map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                    <option value="Custom">Custom / Other Brand...</option>
+                  </select>
+
+                  {(!BRAND_OPTIONS.includes(formBrand) || formBrand === '') && (
+                    <input
+                      type="text"
                       value={formBrand}
                       onChange={(e) => setFormBrand(e.target.value)}
-                      className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
-                    >
-                      <option value="Apple">Apple</option>
-                      <option value="Dell">Dell</option>
-                      <option value="Lenovo">Lenovo</option>
-                      <option value="HP">HP</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
-                      Year *
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      value={formYear}
-                      onChange={(e) => setFormYear(parseInt(e.target.value) || 2021)}
-                      className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
+                      placeholder="Type custom brand name..."
+                      className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111] mt-2"
                     />
-                  </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -1071,17 +1117,40 @@ export default function AdminPanel({
 
                   <div>
                     <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
-                      Best Use Category *
+                      Primary Use Case *
                     </label>
                     <select
-                      value={formCategory}
-                      onChange={(e) => setFormCategory(e.target.value as any)}
+                      value={USE_CASE_OPTIONS.includes(formCategory) ? formCategory : (formCategory ? 'Custom' : '')}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'Custom') {
+                          if (USE_CASE_OPTIONS.includes(formCategory)) {
+                            setFormCategory('');
+                          }
+                        } else {
+                          setFormCategory(val);
+                        }
+                      }}
                       className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
                     >
-                      <option value="School">School / Research</option>
-                      <option value="Work">Office / Productivity</option>
-                      <option value="Design">Creative / Design</option>
+                      <option value="">-- Select Primary Use Case --</option>
+                      {USE_CASE_OPTIONS.map((uc) => (
+                        <option key={uc} value={uc}>
+                          {uc}
+                        </option>
+                      ))}
+                      <option value="Custom">Custom / Other Use Case...</option>
                     </select>
+
+                    {(!USE_CASE_OPTIONS.includes(formCategory) || formCategory === '') && (
+                      <input
+                        type="text"
+                        value={formCategory}
+                        onChange={(e) => setFormCategory(e.target.value)}
+                        placeholder="Type custom use case..."
+                        className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111] mt-2"
+                      />
+                    )}
                   </div>
                 </div>
               </div>
