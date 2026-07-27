@@ -3,6 +3,7 @@ import { Laptop, LaptopCondition } from '../types';
 import { ArrowLeft, X, ShieldCheck, Battery, Cpu, HardDrive, Monitor, Check, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { createReservationInFirestore } from '../lib/firebaseService';
+import { formatNaira } from '../lib/utils';
 
 interface LaptopDetailsModalProps {
   laptop: Laptop | null;
@@ -180,15 +181,15 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
                   {/* Sub-Price details */}
                   <div className="flex items-baseline space-x-3 mt-3">
                     <span className="font-mono text-2xl font-black text-[#FF3B30]">
-                      ${laptop.price}
+                      {formatNaira(laptop.price)}
                     </span>
                     {laptop.originalPrice && (
                       <span className="font-mono text-xs text-[#6B6B6B] line-through">
-                        Est. New: ${laptop.originalPrice}
+                        Est. New: {formatNaira(laptop.originalPrice)}
                       </span>
                     )}
                     <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 font-sans font-medium">
-                      Save ${(laptop.originalPrice || laptop.price + 300) - laptop.price}
+                      Save {formatNaira((laptop.originalPrice || (laptop.price < 10000 ? (laptop.price + 300) * 1000 : laptop.price + 300000)) - (laptop.price < 10000 ? laptop.price * 1000 : laptop.price))}
                     </span>
                   </div>
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Laptop, LaptopCondition, LaptopSpecs } from '../types';
 import { saveLaptopToFirestore, deleteLaptopFromFirestore } from '../lib/firebaseService';
+import { formatNaira } from '../lib/utils';
 import { auth, googleProvider, ALLOWED_ADMIN_EMAILS } from '../firebase';
 import { 
   signInWithPopup, 
@@ -34,6 +35,129 @@ import {
   UserPlus,
   LogIn
 } from 'lucide-react';
+
+export const GPU_OPTIONS = [
+  {
+    group: 'AMD Radeon',
+    options: [
+      'AMD Radeon 540X',
+      'AMD Radeon Graphics',
+      'AMD Radeon Pro Series',
+      'AMD Radeon RX 5500M',
+      'AMD Radeon RX 6500M',
+      'AMD Radeon RX 6600M',
+      'AMD Radeon RX 6700M',
+      'AMD Radeon RX 6800M',
+      'AMD Radeon RX 7600M',
+      'AMD Radeon RX 7700S',
+      'AMD Radeon RX 7800M'
+    ]
+  },
+  {
+    group: 'Apple Silicon GPU',
+    options: [
+      'Apple M1 GPU',
+      'Apple M2 GPU',
+      'Apple M2 Pro GPU',
+      'Apple M2 Max GPU',
+      'Apple M3 GPU',
+      'Apple M3 Pro GPU',
+      'Apple M3 Max GPU'
+    ]
+  },
+  {
+    group: 'Intel Graphics',
+    options: [
+      'Intel Arc Graphics',
+      'Intel Iris Xe Graphics',
+      'Intel UHD Graphics'
+    ]
+  },
+  {
+    group: 'NVIDIA GeForce GTX & MX',
+    options: [
+      'NVIDIA GeForce GTX 1650',
+      'NVIDIA GeForce GTX 1660 Ti',
+      'NVIDIA GeForce MX350',
+      'NVIDIA GeForce MX450'
+    ]
+  },
+  {
+    group: 'NVIDIA GeForce RTX 20 & 30 Series',
+    options: [
+      'NVIDIA GeForce RTX 2050',
+      'NVIDIA GeForce RTX 3050',
+      'NVIDIA GeForce RTX 3050 Ti',
+      'NVIDIA GeForce RTX 3060',
+      'NVIDIA GeForce RTX 3070',
+      'NVIDIA GeForce RTX 3070 Ti',
+      'NVIDIA GeForce RTX 3080',
+      'NVIDIA GeForce RTX 3080 Ti'
+    ]
+  },
+  {
+    group: 'NVIDIA GeForce RTX 40 Series',
+    options: [
+      'NVIDIA GeForce RTX 4050',
+      'NVIDIA GeForce RTX 4060',
+      'NVIDIA GeForce RTX 4070',
+      'NVIDIA GeForce RTX 4080',
+      'NVIDIA GeForce RTX 4090'
+    ]
+  },
+  {
+    group: 'NVIDIA Workstation RTX',
+    options: [
+      'NVIDIA RTX A1000',
+      'NVIDIA RTX A2000',
+      'NVIDIA RTX A3000',
+      'NVIDIA RTX A4000'
+    ]
+  }
+];
+
+export const ALL_PRESET_GPUS = GPU_OPTIONS.flatMap((g) => g.options);
+
+export const RAM_OPTIONS = [
+  '4GB',
+  '8GB',
+  '12GB',
+  '16GB',
+  '24GB',
+  '32GB',
+  '48GB',
+  '64GB',
+  '96GB',
+  '128GB'
+];
+
+export const STORAGE_OPTIONS = [
+  '128GB',
+  '256GB',
+  '512GB',
+  '1TB',
+  '2TB',
+  '4TB',
+  '8TB'
+];
+
+export const SCREEN_OPTIONS = [
+  '11" HD Display',
+  '12" HD Display',
+  '13" Full HD Display',
+  '13.3" Retina Display',
+  '14" Full HD Display',
+  '14" Retina Display',
+  '15" Full HD Display',
+  '15.6" Full HD Display',
+  '15.6" OLED Display',
+  '16" Retina Display',
+  '16" Liquid Retina Display',
+  '17" Full HD Display',
+  '17.3" Full HD Display',
+  '17.3" QHD Display',
+  '17.3" 4K UHD Display'
+];
 
 interface AdminPanelProps {
   laptops: Laptop[];
@@ -215,10 +339,10 @@ export default function AdminPanel({
   const [formBatteryHealth, setFormBatteryHealth] = useState(90);
   const [formBatteryNote, setFormBatteryNote] = useState('90% Health • Checked & Excellent');
   const [formCpu, setFormCpu] = useState('');
-  const [formRam, setFormRam] = useState('16GB RAM');
-  const [formStorage, setFormStorage] = useState('512GB NVMe SSD');
+  const [formRam, setFormRam] = useState('16GB');
+  const [formStorage, setFormStorage] = useState('512GB');
   const [formScreen, setFormScreen] = useState('14" Retina Display');
-  const [formGraphics, setFormGraphics] = useState('Integrated GPU');
+  const [formGraphics, setFormGraphics] = useState('Intel Iris Xe Graphics');
   const [formImage, setFormImage] = useState('');
   const [formStock, setFormStock] = useState(1);
   const [formCategory, setFormCategory] = useState<'School' | 'Work' | 'Design'>('Work');
@@ -731,7 +855,7 @@ export default function AdminPanel({
                         </div>
                       </td>
                       <td className="p-4 font-mono font-bold text-[#111111]">
-                        ${laptop.price}
+                        {formatNaira(laptop.price)}
                       </td>
                       <td className="p-4">
                         <div className="flex items-center space-x-1.5">
@@ -875,7 +999,7 @@ export default function AdminPanel({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
-                      Our Price ($USD) *
+                      Our Price (₦ NGN) *
                     </label>
                     <input
                       type="number"
@@ -888,7 +1012,7 @@ export default function AdminPanel({
 
                   <div>
                     <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
-                      Original Price ($USD)
+                      Original Price (₦ NGN)
                     </label>
                     <input
                       type="number"
@@ -1036,28 +1160,76 @@ export default function AdminPanel({
                     <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
                       RAM Size *
                     </label>
-                    <input
-                      type="text"
-                      required
-                      value={formRam}
-                      onChange={(e) => setFormRam(e.target.value)}
-                      placeholder="e.g., 16GB LPDDR5"
+                    <select
+                      value={RAM_OPTIONS.includes(formRam) ? formRam : (formRam ? 'Custom' : '')}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'Custom') {
+                          if (RAM_OPTIONS.includes(formRam)) {
+                            setFormRam('');
+                          }
+                        } else {
+                          setFormRam(val);
+                        }
+                      }}
                       className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
-                    />
+                    >
+                      <option value="">-- Select RAM --</option>
+                      {RAM_OPTIONS.map((ram) => (
+                        <option key={ram} value={ram}>
+                          {ram}
+                        </option>
+                      ))}
+                      <option value="Custom">Custom / Other RAM...</option>
+                    </select>
+
+                    {(!RAM_OPTIONS.includes(formRam) || formRam === '') && (
+                      <input
+                        type="text"
+                        value={formRam}
+                        onChange={(e) => setFormRam(e.target.value)}
+                        placeholder="Type custom RAM size..."
+                        className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111] mt-2"
+                      />
+                    )}
                   </div>
 
                   <div>
                     <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
-                      SSD Storage *
+                      SSD / Storage *
                     </label>
-                    <input
-                      type="text"
-                      required
-                      value={formStorage}
-                      onChange={(e) => setFormStorage(e.target.value)}
-                      placeholder="e.g., 512GB NVMe SSD"
+                    <select
+                      value={STORAGE_OPTIONS.includes(formStorage) ? formStorage : (formStorage ? 'Custom' : '')}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'Custom') {
+                          if (STORAGE_OPTIONS.includes(formStorage)) {
+                            setFormStorage('');
+                          }
+                        } else {
+                          setFormStorage(val);
+                        }
+                      }}
                       className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
-                    />
+                    >
+                      <option value="">-- Select Storage --</option>
+                      {STORAGE_OPTIONS.map((st) => (
+                        <option key={st} value={st}>
+                          {st}
+                        </option>
+                      ))}
+                      <option value="Custom">Custom / Other Storage...</option>
+                    </select>
+
+                    {(!STORAGE_OPTIONS.includes(formStorage) || formStorage === '') && (
+                      <input
+                        type="text"
+                        value={formStorage}
+                        onChange={(e) => setFormStorage(e.target.value)}
+                        placeholder="Type custom storage size..."
+                        className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111] mt-2"
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -1066,27 +1238,80 @@ export default function AdminPanel({
                     <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
                       Screen Display *
                     </label>
-                    <input
-                      type="text"
-                      required
-                      value={formScreen}
-                      onChange={(e) => setFormScreen(e.target.value)}
-                      placeholder="e.g. 16 Liquid Retina 120Hz"
+                    <select
+                      value={SCREEN_OPTIONS.includes(formScreen) ? formScreen : (formScreen ? 'Custom' : '')}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'Custom') {
+                          if (SCREEN_OPTIONS.includes(formScreen)) {
+                            setFormScreen('');
+                          }
+                        } else {
+                          setFormScreen(val);
+                        }
+                      }}
                       className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
-                    />
+                    >
+                      <option value="">-- Select Screen Display --</option>
+                      {SCREEN_OPTIONS.map((scr) => (
+                        <option key={scr} value={scr}>
+                          {scr}
+                        </option>
+                      ))}
+                      <option value="Custom">Custom / Other Display...</option>
+                    </select>
+
+                    {(!SCREEN_OPTIONS.includes(formScreen) || formScreen === '') && (
+                      <input
+                        type="text"
+                        value={formScreen}
+                        onChange={(e) => setFormScreen(e.target.value)}
+                        placeholder="Type custom display specification..."
+                        className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111] mt-2"
+                      />
+                    )}
                   </div>
 
                   <div>
                     <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
-                      Graphics Card
+                      Graphics Card *
                     </label>
-                    <input
-                      type="text"
-                      value={formGraphics}
-                      onChange={(e) => setFormGraphics(e.target.value)}
-                      placeholder="e.g. Intel Iris Xe / Nvidia RTX"
+                    <select
+                      value={ALL_PRESET_GPUS.includes(formGraphics) ? formGraphics : (formGraphics ? 'Custom' : '')}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'Custom') {
+                          if (ALL_PRESET_GPUS.includes(formGraphics)) {
+                            setFormGraphics('');
+                          }
+                        } else {
+                          setFormGraphics(val);
+                        }
+                      }}
                       className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
-                    />
+                    >
+                      <option value="">-- Select Graphics Card --</option>
+                      {GPU_OPTIONS.map((group) => (
+                        <optgroup key={group.group} label={group.group}>
+                          {group.options.map((gpu) => (
+                            <option key={gpu} value={gpu}>
+                              {gpu}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                      <option value="Custom">Custom / Other Graphics Card...</option>
+                    </select>
+
+                    {(!ALL_PRESET_GPUS.includes(formGraphics) || formGraphics === '') && (
+                      <input
+                        type="text"
+                        value={formGraphics}
+                        onChange={(e) => setFormGraphics(e.target.value)}
+                        placeholder="Type custom graphics card name..."
+                        className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111] mt-2"
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -1188,7 +1413,7 @@ export default function AdminPanel({
                       {laptop.deliveredDate || 'DELIVERED'}
                     </span>
                     <span className="font-mono text-sm font-bold text-neutral-400 line-through mt-1 block">
-                      ${laptop.price}
+                      {formatNaira(laptop.price)}
                     </span>
                   </div>
                 </div>

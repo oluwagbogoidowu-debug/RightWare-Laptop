@@ -15,10 +15,10 @@ export default function ShopBySection({ onSelectFilter, activeBudget, activeBran
   const [direction, setDirection] = useState<number>(0);
 
   const budgets: { label: string; value: FilterBudget; desc: string }[] = [
-    { label: 'Under $400', value: 'under-400', desc: 'Highly affordable student laptops' },
-    { label: '$400 - $700', value: '400-700', desc: 'Standard business & coding workhorses' },
-    { label: '$700 - $1000', value: '700-1000', desc: 'High performance & modern designs' },
-    { label: '$1000+', value: 'above-1000', desc: 'Premium workstation & flagship units' }
+    { label: 'Under ₦400k', value: 'under-400', desc: 'Highly affordable student laptops' },
+    { label: '₦400k - ₦700k', value: '400-700', desc: 'Standard business & coding workhorses' },
+    { label: '₦700k - ₦1m', value: '700-1000', desc: 'High performance & modern designs' },
+    { label: '₦1m+', value: 'above-1000', desc: 'Premium workstation & flagship units' }
   ];
 
   const brands: { name: FilterBrand; count: number; image: string }[] = [
@@ -211,7 +211,7 @@ export default function ShopBySection({ onSelectFilter, activeBudget, activeBran
                                 }`}
                               >
                                 <div className="bg-white p-2 border border-[#E5E5E5] flex-shrink-0 font-mono text-[11px] font-black text-[#FF3B30] h-9 w-9 flex items-center justify-center">
-                                  $$
+                                  ₦
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <span className="font-display font-bold text-xs sm:text-sm text-[#111111] flex items-center justify-between">

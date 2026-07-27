@@ -2,6 +2,7 @@ import React from 'react';
 import { Laptop } from '../types';
 import { SOLD_LAPTOPS } from '../data';
 import { ShieldCheck, Truck, MessageSquare } from 'lucide-react';
+import { formatNaira } from '../lib/utils';
 
 interface RecentlyDeliveredProps {
   soldLaptops?: Laptop[];
@@ -60,7 +61,7 @@ export default function RecentlyDelivered({ soldLaptops = SOLD_LAPTOPS }: Recent
                     </p>
                   </div>
                   <span className="font-mono text-sm font-bold text-[#6B6B6B] line-through">
-                    ${laptop.price}
+                    {formatNaira(laptop.price)}
                   </span>
                 </div>
 

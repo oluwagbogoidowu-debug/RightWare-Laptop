@@ -1,6 +1,7 @@
 import React from 'react';
 import { Laptop, FilterState, LaptopCondition } from '../types';
 import { Search, RotateCcw, AlertTriangle, ShieldCheck, Tag } from 'lucide-react';
+import { formatNaira } from '../lib/utils';
 
 interface ProductSectionProps {
   laptops: Laptop[];
@@ -112,10 +113,10 @@ export default function ProductSection({
                 className="font-sans font-bold text-[#111111] focus:outline-hidden bg-transparent"
               >
                 <option value="all">Any Budget</option>
-                <option value="under-400">Under $400</option>
-                <option value="400-700">$400 - $700</option>
-                <option value="700-1000">$700 - $1000</option>
-                <option value="above-1000">$1000+</option>
+                <option value="under-400">Under ₦400,000</option>
+                <option value="400-700">₦400,000 - ₦700,000</option>
+                <option value="700-1000">₦700,000 - ₦1,000,000</option>
+                <option value="above-1000">Above ₦1,000,000</option>
               </select>
             </div>
 
@@ -215,7 +216,7 @@ export default function ProductSection({
                   <div className="flex flex-col">
                     <span className="text-[9px] font-mono text-[#6B6B6B] uppercase tracking-wider">Verified Price</span>
                     <span className="font-mono text-base font-extrabold text-[#FF3B30] mt-0.5 leading-none">
-                      ${laptop.price}
+                      {formatNaira(laptop.price)}
                     </span>
                   </div>
                   

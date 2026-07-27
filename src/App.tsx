@@ -151,11 +151,11 @@ export default function App() {
 
       // 3. Budget match
       if (filters.budget !== 'all') {
-        const price = laptop.price;
-        if (filters.budget === 'under-400' && price >= 400) return false;
-        if (filters.budget === '400-700' && (price < 400 || price > 700)) return false;
-        if (filters.budget === '700-1000' && (price < 700 || price > 1000)) return false;
-        if (filters.budget === 'above-1000' && price <= 1000) return false;
+        const price = laptop.price < 10000 ? laptop.price * 1000 : laptop.price;
+        if (filters.budget === 'under-400' && price >= 400000) return false;
+        if (filters.budget === '400-700' && (price < 400000 || price > 700000)) return false;
+        if (filters.budget === '700-1000' && (price < 700000 || price > 1000000)) return false;
+        if (filters.budget === 'above-1000' && price <= 1000000) return false;
       }
 
       // 4. Search query (matches model name, CPU, RAM, or description)
@@ -446,7 +446,7 @@ export default function App() {
                         Budget Friendly
                       </h3>
                       <p className="font-sans text-xs text-[#6B6B6B] mt-1.5 leading-normal">
-                        Incredible performance per dollar, mostly under $400.
+                        Incredible performance per value, mostly under ₦400,000.
                       </p>
                     </div>
                     <span className="font-mono text-xs font-bold text-[#111111] flex items-center gap-1 mt-4 group-hover:translate-x-1.5 transition-transform">
