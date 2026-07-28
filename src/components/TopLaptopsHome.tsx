@@ -41,9 +41,6 @@ export default function TopLaptopsHome({
             <h2 className="font-display font-extrabold text-2xl sm:text-4xl text-[#111111] tracking-tight">
               Top 3 Available Laptops
             </h2>
-            <p className="font-sans text-xs sm:text-sm text-[#6B6B6B] mt-1.5 max-w-xl">
-              Freshly inspected, 80%+ guaranteed battery health, and ready for immediate Lagos pickup or fast nationwide delivery.
-            </p>
           </div>
 
           <button

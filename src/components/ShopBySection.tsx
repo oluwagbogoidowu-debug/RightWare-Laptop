@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FilterBudget, FilterBrand, FilterUse } from '../types';
 import { DollarSign, Cpu, Laptop, GraduationCap, Briefcase, Palette, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -8,11 +8,27 @@ interface ShopBySectionProps {
   activeBudget: FilterBudget;
   activeBrand: FilterBrand;
   activeUse: FilterUse;
+  activePage?: number;
+  onPageChange?: (page: number) => void;
 }
 
-export default function ShopBySection({ onSelectFilter, activeBudget, activeBrand, activeUse }: ShopBySectionProps) {
-  const [currentPage, setCurrentPage] = useState<number>(0);
+export default function ShopBySection({
+  onSelectFilter,
+  activeBudget,
+  activeBrand,
+  activeUse,
+  activePage = 0,
+  onPageChange
+}: ShopBySectionProps) {
+  const [currentPage, setCurrentPage] = useState<number>(activePage);
   const [direction, setDirection] = useState<number>(0);
+
+  useEffect(() => {
+    if (activePage !== undefined && activePage !== currentPage) {
+      setDirection(activePage > currentPage ? 1 : -1);
+      setCurrentPage(activePage);
+    }
+  }, [activePage]);
 
   const budgets: { label: string; value: FilterBudget; desc: string }[] = [
     { label: 'Under ₦400k', value: 'under-400', desc: 'Highly affordable student laptops' },
@@ -37,16 +53,21 @@ export default function ShopBySection({ onSelectFilter, activeBudget, activeBran
   const handlePageChange = (newPage: number) => {
     setDirection(newPage > currentPage ? 1 : -1);
     setCurrentPage(newPage);
+    if (onPageChange) onPageChange(newPage);
   };
 
   const handleNext = () => {
     setDirection(1);
-    setCurrentPage((prev) => (prev + 1) % 3);
+    const nextPage = (currentPage + 1) % 3;
+    setCurrentPage(nextPage);
+    if (onPageChange) onPageChange(nextPage);
   };
 
   const handlePrev = () => {
     setDirection(-1);
-    setCurrentPage((prev) => (prev - 1 + 3) % 3);
+    const prevPage = (currentPage - 1 + 3) % 3;
+    setCurrentPage(prevPage);
+    if (onPageChange) onPageChange(prevPage);
   };
 
   const handleDragEnd = (event: any, info: any) => {
@@ -85,20 +106,14 @@ export default function ShopBySection({ onSelectFilter, activeBudget, activeBran
   const activeHeader = getHeaderDetails();
 
   return (
-    <section className="py-16 sm:py-24 bg-white border-t border-[#E5E5E5]">
+    <section id="shop-by-section" className="py-16 sm:py-24 bg-white border-t border-[#E5E5E5]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center">
         
         {/* Main Section Header */}
         <div className="text-center max-w-2xl mb-12">
-          <span className="font-mono text-xs uppercase tracking-widest text-[#FF3B30] font-bold">
-            Tailored Matching
-          </span>
-          <h2 className="font-display font-bold text-3xl sm:text-4xl text-[#111111] mt-2 tracking-tight">
+          <h2 className="font-display font-bold text-3xl sm:text-4xl text-[#111111] tracking-tight">
             Shop by Category
           </h2>
-          <p className="font-sans text-sm text-[#6B6B6B] mt-2 leading-relaxed">
-            Quickly narrow down the entire catalog. Swipe left or click the dots on the interactive card below to switch views.
-          </p>
         </div>
 
         {/* Swipe Card Container */}

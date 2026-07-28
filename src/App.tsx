@@ -84,6 +84,9 @@ export default function App() {
   // Active view tab: 'home' | 'shop'
   const [currentTab, setCurrentTab] = useState<'home' | 'shop'>('home');
 
+  // Active page inside ShopBySection: 0 = Use Case, 1 = Budget, 2 = Brand
+  const [shopByPage, setShopByPage] = useState<number>(0);
+
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
     budget: 'all',
@@ -98,6 +101,15 @@ export default function App() {
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+
+  // Navigate to budget part of price tiers
+  const handleNavigateToBudget = () => {
+    setShopByPage(1); // 1 = Browse by Budget (Price Tiers)
+    setCurrentTab('shop');
+    setTimeout(() => {
+      scrollToId('shop-by-section');
+    }, 100);
   };
 
   // Helper when clicking quick filters in the categories block
@@ -264,7 +276,7 @@ export default function App() {
                     />
                     
                     {/* Image Inset Labels */}
-                    <div className="absolute bottom-3 left-3 sm:bottom-5 sm:left-5 flex flex-wrap gap-2">
+                    <div className="absolute bottom-3 sm:bottom-5 inset-x-0 flex flex-wrap justify-center items-center gap-2 px-3">
                       <span className="inline-flex items-center bg-white/95 border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111] shadow-xs">
                         <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
                         Dedicated GPUs
@@ -290,11 +302,7 @@ export default function App() {
                     </button>
 
                     <button
-                      onClick={() => {
-                        setFilters((prev) => ({ ...prev, budget: 'under-400' }));
-                        setCurrentTab('shop');
-                        setTimeout(() => scrollToId('available-laptops'), 100);
-                      }}
+                      onClick={handleNavigateToBudget}
                       className="bg-white hover:bg-neutral-50 active:bg-white text-[#111111] border border-[#E5E5E5] font-sans text-xs sm:text-sm font-semibold px-6 py-3.5 transition-colors cursor-pointer text-center flex items-center justify-center space-x-2"
                     >
                       <span>Browse by Budget</span>
@@ -421,12 +429,9 @@ export default function App() {
                     </span>
                   </div>
 
-                  {/* Card 4: Under $400 Budget */}
+                  {/* Card 4: Budget Friendly */}
                   <div 
-                    onClick={() => {
-                      handleSelectCategoryFilter('budget', 'under-400');
-                      setCurrentTab('shop');
-                    }}
+                    onClick={handleNavigateToBudget}
                     className="group bg-white border border-[#E5E5E5] p-6 hover:border-[#FF3B30] hover:shadow-md transition-all cursor-pointer flex flex-col justify-between h-56 relative overflow-hidden"
                   >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-[#FF3B30]/5 rounded-bl-full translate-x-4 -translate-y-4 group-hover:scale-110 transition-transform duration-300" />
@@ -482,6 +487,8 @@ export default function App() {
               activeBudget={filters.budget}
               activeBrand={filters.brand}
               activeUse={filters.use}
+              activePage={shopByPage}
+              onPageChange={setShopByPage}
             />
 
             {/* Product Hub Grid */}
