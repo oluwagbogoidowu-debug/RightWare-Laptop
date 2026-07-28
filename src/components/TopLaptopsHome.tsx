@@ -1,7 +1,7 @@
 import React from 'react';
 import { Laptop } from '../types';
 import { formatNaira } from '../lib/utils';
-import { ShieldCheck, Tag, Battery, ChevronRight, ArrowRight, Sparkles } from 'lucide-react';
+import { ShieldCheck, Tag, Battery, ChevronRight, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
 
 interface TopLaptopsHomeProps {
   topLaptops: Laptop[];
@@ -147,6 +147,18 @@ export default function TopLaptopsHome({
 
             </div>
           ))}
+        </div>
+
+        {/* Fast assurance list below #3 Top Arrival card */}
+        <div className="mt-8 pt-6 border-t border-[#E5E5E5] grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl text-xs font-mono text-[#6B6B6B]">
+          <div className="flex items-center space-x-2">
+            <CheckCircle2 className="h-4 w-4 text-[#FF3B30] flex-shrink-0" />
+            <span>Real Photos of Exact Units</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <CheckCircle2 className="h-4 w-4 text-[#FF3B30] flex-shrink-0" />
+            <span>Fully tested with no surprises</span>
+          </div>
         </div>
 
       </div>

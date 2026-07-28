@@ -7,7 +7,6 @@ import { motion } from 'motion/react';
 
 // Import our modular custom components
 import Navbar from './components/Navbar';
-import TrustStrip from './components/TrustStrip';
 import ShopBySection from './components/ShopBySection';
 import ProductSection from './components/ProductSection';
 import HowItWorks from './components/HowItWorks';
@@ -248,53 +247,33 @@ export default function App() {
               <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 <div className="space-y-6 sm:space-y-8">
                   
-                  {/* Top Badge & Headline */}
+                  {/* Main Headline */}
                   <div className="space-y-4">
-                    {/* 80%+ Guaranteed Battery Badge */}
-                    <div className="flex items-center">
-                      <span className="inline-flex items-center bg-emerald-50 text-emerald-800 border border-emerald-200 px-3.5 py-1.5 text-xs font-mono font-bold shadow-xs">
-                        <Battery className="h-4 w-4 text-emerald-600 mr-2 flex-shrink-0" />
-                        80%+ Guaranteed Battery
-                      </span>
-                    </div>
-
-                    {/* Main Headline */}
                     <h1 className="font-display font-extrabold text-3xl sm:text-5xl lg:text-6xl text-[#111111] leading-[1.15] tracking-tight">
-                      Get high-performance laptops you can trust <span className="text-[#6B6B6B]">without paying new-device prices.</span>
+                      Get high-performance laptops you can trust <span className="text-[#999999]">without paying new-device prices.</span>
                     </h1>
                   </div>
 
                   {/* Hero Laptop Image (Directly below 'without paying new-device prices.') */}
-                  <div className="relative w-full overflow-hidden bg-white border border-[#E5E5E5] p-2.5 shadow-sm">
-                    <div className="aspect-[16/9] sm:aspect-[21/9] w-full overflow-hidden relative">
-                      <img
-                        src="https://images.unsplash.com/photo-1603302576837-37561b2e2302?auto=format&fit=crop&w=1200&q=80"
-                        alt="Premium Used Laptop Workspace"
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover filter grayscale-[0.05]"
-                      />
-                      
-                      {/* Floating Certified Seal */}
-                      <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 bg-[#111111] text-white p-3 sm:p-3.5 shadow-md flex items-center space-x-3">
-                        <Shield className="h-5 w-5 text-[#FF3B30] flex-shrink-0" />
-                        <div className="text-left">
-                          <span className="font-mono text-[9px] sm:text-[10px] tracking-widest uppercase block text-[#FF3B30] font-black leading-none">TESTED & WORKING PROPERLY</span>
-                          <span className="font-display font-semibold text-xs sm:text-sm mt-1 block text-white">45-Point Comprehensive Diagnostics Passed</span>
-                        </div>
-                      </div>
+                  <div className="relative aspect-[16/9] sm:aspect-[21/9] w-full overflow-hidden">
+                    <img
+                      src="https://images.unsplash.com/photo-1603302576837-37561b2e2302?auto=format&fit=crop&w=1200&q=80"
+                      alt="Premium Used Laptop Workspace"
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover filter grayscale-[0.05]"
+                    />
+                    
+                    {/* Image Inset Labels */}
+                    <div className="absolute bottom-3 left-3 sm:bottom-5 sm:left-5 flex flex-wrap gap-2">
+                      <span className="inline-flex items-center bg-white/95 border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111] shadow-xs">
+                        <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
+                        Dedicated GPUs
+                      </span>
+                      <span className="inline-flex items-center bg-white/95 border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111] shadow-xs">
+                        <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
+                        High RAM
+                      </span>
                     </div>
-                  </div>
-
-                  {/* Feature Badges */}
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
-                      <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
-                      Dedicated GPUs
-                    </span>
-                    <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
-                      <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
-                      High RAM
-                    </span>
                   </div>
 
                   {/* Combined CTA triggers */}
@@ -323,24 +302,9 @@ export default function App() {
                     </button>
                   </div>
 
-                  {/* Fast assurance list */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 sm:pt-6 border-t border-[#E5E5E5] text-xs font-mono text-[#6B6B6B]">
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle2 className="h-4 w-4 text-[#FF3B30] flex-shrink-0" />
-                      <span>Real Photos of Exact Units</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle2 className="h-4 w-4 text-[#FF3B30] flex-shrink-0" />
-                      <span>Fully tested with no surprises</span>
-                    </div>
-                  </div>
-
                 </div>
               </div>
             </section>
-
-            {/* Minimal guarantees strip */}
-            <TrustStrip />
 
             {/* Top 3 Latest Laptops Section */}
             <TopLaptopsHome
