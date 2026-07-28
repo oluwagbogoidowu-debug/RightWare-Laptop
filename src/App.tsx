@@ -244,93 +244,29 @@ export default function App() {
         {currentTab === 'home' ? (
           <>
             {/* HERO SECTION */}
-            <section className="relative overflow-hidden py-12 sm:py-20 lg:py-24 bg-[#F7F7F7] border-b border-[#E5E5E5]">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+            <section className="relative overflow-hidden py-12 sm:py-16 lg:py-20 bg-[#F7F7F7] border-b border-[#E5E5E5]">
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div className="space-y-6 sm:space-y-8">
                   
-                  {/* Left Column: Typography & CTAs */}
-                  <div className="lg:col-span-7 space-y-6 sm:space-y-8 max-w-2xl">
-                    <div className="flex flex-col gap-4">
-                      {/* Main Headline */}
-                      <h1 className="order-1 md:order-2 font-display font-extrabold text-3xl sm:text-5xl lg:text-6xl text-[#111111] leading-[1.15] tracking-tight">
-                        Get high-performance laptops you can trust without paying new-device prices.
-                      </h1>
-
-                      {/* 80%+ Guaranteed Battery Badge (In front of headline on desktop, below headline on mobile) */}
-                      <div className="order-2 md:order-1 flex items-center">
-                        <span className="inline-flex items-center bg-emerald-50 text-emerald-800 border border-emerald-200 px-3.5 py-1.5 text-xs font-mono font-bold shadow-xs">
-                          <Battery className="h-4 w-4 text-emerald-600 mr-2 flex-shrink-0" />
-                          80%+ Guaranteed Battery
-                        </span>
-                      </div>
-
-                      {/* Feature Badges */}
-                      <div className="order-3 flex flex-wrap gap-2 pt-1">
-                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
-                          <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
-                          Dedicated GPUs
-                        </span>
-                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
-                          <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
-                          High RAM
-                        </span>
-                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
-                          <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
-                          Fully tested
-                        </span>
-                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
-                          <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
-                          Real units
-                        </span>
-                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
-                          <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
-                          No surprises
-                        </span>
-                      </div>
+                  {/* Top Badge & Headline */}
+                  <div className="space-y-4">
+                    {/* 80%+ Guaranteed Battery Badge */}
+                    <div className="flex items-center">
+                      <span className="inline-flex items-center bg-emerald-50 text-emerald-800 border border-emerald-200 px-3.5 py-1.5 text-xs font-mono font-bold shadow-xs">
+                        <Battery className="h-4 w-4 text-emerald-600 mr-2 flex-shrink-0" />
+                        80%+ Guaranteed Battery
+                      </span>
                     </div>
 
-                    {/* Combined CTA triggers */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                      <button
-                        onClick={() => {
-                          setCurrentTab('shop');
-                          setTimeout(() => scrollToId('available-laptops'), 100);
-                        }}
-                        className="bg-[#FF3B30] hover:bg-[#FF3B30]/90 active:bg-[#FF3B30] text-white font-sans text-xs sm:text-sm font-semibold px-6 py-3.5 transition-colors cursor-pointer text-center flex items-center justify-center space-x-2.5"
-                      >
-                        <span>View Available Laptops</span>
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setFilters((prev) => ({ ...prev, budget: 'under-400' }));
-                          setCurrentTab('shop');
-                          setTimeout(() => scrollToId('available-laptops'), 100);
-                        }}
-                        className="bg-white hover:bg-neutral-50 active:bg-white text-[#111111] border border-[#E5E5E5] font-sans text-xs sm:text-sm font-semibold px-6 py-3.5 transition-colors cursor-pointer text-center flex items-center justify-center space-x-2"
-                      >
-                        <span>Browse by Budget</span>
-                        <ArrowUpRight className="h-4 w-4 text-[#6B6B6B]" />
-                      </button>
-                    </div>
-
-                    {/* Fast assurance list */}
-                    <div className="grid grid-cols-2 gap-4 pt-4 sm:pt-6 border-t border-[#E5E5E5] text-xs font-mono text-[#6B6B6B]">
-                      <div className="flex items-center space-x-2">
-                        <CheckCircle2 className="h-4 w-4 text-[#FF3B30] flex-shrink-0" />
-                        <span>Real Photos of Exact Units</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <CheckCircle2 className="h-4 w-4 text-[#FF3B30] flex-shrink-0" />
-                        <span>80%+ Guaranteed Battery</span>
-                      </div>
-                    </div>
+                    {/* Main Headline */}
+                    <h1 className="font-display font-extrabold text-3xl sm:text-5xl lg:text-6xl text-[#111111] leading-[1.15] tracking-tight">
+                      Get high-performance laptops you can trust <span className="text-[#6B6B6B]">without paying new-device prices.</span>
+                    </h1>
                   </div>
 
-                  {/* Right Column: Premium Hero Image with Badges */}
-                  <div className="lg:col-span-5 relative">
-                    <div className="relative aspect-[4/3] sm:aspect-[16/11] lg:aspect-square w-full overflow-hidden bg-white border border-[#E5E5E5] p-2.5 shadow-sm">
+                  {/* Hero Laptop Image (Directly below 'without paying new-device prices.') */}
+                  <div className="relative w-full overflow-hidden bg-white border border-[#E5E5E5] p-2.5 shadow-sm">
+                    <div className="aspect-[16/9] sm:aspect-[21/9] w-full overflow-hidden relative">
                       <img
                         src="https://images.unsplash.com/photo-1603302576837-37561b2e2302?auto=format&fit=crop&w=1200&q=80"
                         alt="Premium Used Laptop Workspace"
@@ -338,25 +274,64 @@ export default function App() {
                         className="w-full h-full object-cover filter grayscale-[0.05]"
                       />
                       
-                      {/* Floating Diagnostics Seal */}
-                      <div className="absolute top-6 right-6 bg-white border border-[#E5E5E5] p-3 shadow-md flex items-center space-x-3 max-w-[220px]">
-                        <div className="bg-red-50 p-2 rounded-none flex items-center justify-center">
-                          <Battery className="h-4 w-4 text-[#FF3B30]" />
-                        </div>
-                        <div>
-                          <h4 className="font-display font-bold text-[11px] text-[#111111] leading-tight">Battery Checked</h4>
-                          <p className="font-sans text-[9px] text-[#6B6B6B] mt-0.5 leading-none">Diagnostic Log: 92%</p>
-                        </div>
-                      </div>
-
                       {/* Floating Certified Seal */}
-                      <div className="absolute bottom-6 left-6 bg-[#111111] text-white p-3.5 shadow-md flex items-center space-x-3">
-                        <Shield className="h-5 w-5 text-[#FF3B30]" />
+                      <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 bg-[#111111] text-white p-3 sm:p-3.5 shadow-md flex items-center space-x-3">
+                        <Shield className="h-5 w-5 text-[#FF3B30] flex-shrink-0" />
                         <div className="text-left">
-                          <span className="font-mono text-[9px] tracking-widest uppercase block text-[#FF3B30] font-black leading-none">RELIABLE STANDARD</span>
-                          <span className="font-display font-semibold text-xs mt-1 block text-white">45-Point Pass Certificate</span>
+                          <span className="font-mono text-[9px] sm:text-[10px] tracking-widest uppercase block text-[#FF3B30] font-black leading-none">TESTED & WORKING PROPERLY</span>
+                          <span className="font-display font-semibold text-xs sm:text-sm mt-1 block text-white">45-Point Comprehensive Diagnostics Passed</span>
                         </div>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Feature Badges */}
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
+                      <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
+                      Dedicated GPUs
+                    </span>
+                    <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
+                      <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
+                      High RAM
+                    </span>
+                  </div>
+
+                  {/* Combined CTA triggers */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+                    <button
+                      onClick={() => {
+                        setCurrentTab('shop');
+                        setTimeout(() => scrollToId('available-laptops'), 100);
+                      }}
+                      className="bg-[#FF3B30] hover:bg-[#FF3B30]/90 active:bg-[#FF3B30] text-white font-sans text-xs sm:text-sm font-semibold px-6 py-3.5 transition-colors cursor-pointer text-center flex items-center justify-center space-x-2.5"
+                    >
+                      <span>View Available Laptops</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setFilters((prev) => ({ ...prev, budget: 'under-400' }));
+                        setCurrentTab('shop');
+                        setTimeout(() => scrollToId('available-laptops'), 100);
+                      }}
+                      className="bg-white hover:bg-neutral-50 active:bg-white text-[#111111] border border-[#E5E5E5] font-sans text-xs sm:text-sm font-semibold px-6 py-3.5 transition-colors cursor-pointer text-center flex items-center justify-center space-x-2"
+                    >
+                      <span>Browse by Budget</span>
+                      <ArrowUpRight className="h-4 w-4 text-[#6B6B6B]" />
+                    </button>
+                  </div>
+
+                  {/* Fast assurance list */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 sm:pt-6 border-t border-[#E5E5E5] text-xs font-mono text-[#6B6B6B]">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle2 className="h-4 w-4 text-[#FF3B30] flex-shrink-0" />
+                      <span>Real Photos of Exact Units</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle2 className="h-4 w-4 text-[#FF3B30] flex-shrink-0" />
+                      <span>Fully tested with no surprises</span>
                     </div>
                   </div>
 
