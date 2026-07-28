@@ -673,6 +673,7 @@ export default function AdminPanel({
 
     const newLaptop: Laptop = {
       id: `lap-${Date.now()}`,
+      createdAt: Date.now(),
       name: formName,
       brand: formBrand,
       year: new Date().getFullYear(),

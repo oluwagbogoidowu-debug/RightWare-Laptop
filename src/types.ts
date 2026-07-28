@@ -10,6 +10,7 @@ export type LaptopCondition = 'Clean' | 'Very Clean' | 'Good';
 
 export interface Laptop {
   id: string;
+  createdAt?: number;
   name: string;
   brand: string;
   year?: number;

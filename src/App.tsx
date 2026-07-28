@@ -16,6 +16,7 @@ import RecentlyDelivered from './components/RecentlyDelivered';
 import Footer from './components/Footer';
 import LaptopDetailsModal from './components/LaptopDetailsModal';
 import AdminPanel from './components/AdminPanel';
+import TopLaptopsHome from './components/TopLaptopsHome';
 
 export default function App() {
   const [laptops, setLaptops] = useState<Laptop[]>(ACTIVE_LAPTOPS);
@@ -176,12 +177,40 @@ export default function App() {
     const activeFiltered = laptops.filter(filterFn);
     const soldFiltered = soldLaptops.filter(filterFn);
 
-    // Prioritize available listings first, then sold-out ones in between
-    const availableActive = activeFiltered.filter((l) => l.stockCount > 0 && !l.isSold);
-    const soldOutActive = activeFiltered.filter((l) => l.stockCount === 0 || l.isSold);
+    const sortByLatest = (list: Laptop[]) => {
+      return [...list].sort((a, b) => {
+        if (a.createdAt && b.createdAt) {
+          return b.createdAt - a.createdAt;
+        }
+        if (a.createdAt) return -1;
+        if (b.createdAt) return 1;
 
-    return [...availableActive, ...soldOutActive, ...soldFiltered];
+        const numA = Number(a.id.replace(/\D/g, '')) || 0;
+        const numB = Number(b.id.replace(/\D/g, '')) || 0;
+        return numB - numA;
+      });
+    };
+
+    // Prioritize available listings first, then sold-out ones, sorted by latest
+    const availableActive = sortByLatest(activeFiltered.filter((l) => l.stockCount > 0 && !l.isSold));
+    const soldOutActive = sortByLatest(activeFiltered.filter((l) => l.stockCount === 0 || l.isSold));
+    const sortedSold = sortByLatest(soldFiltered);
+
+    return [...availableActive, ...soldOutActive, ...sortedSold];
   }, [laptops, soldLaptops, filters]);
+
+  // Top 3 latest laptops for the Home view
+  const top3Laptops = useMemo(() => {
+    const available = laptops.filter((l) => l.isForSale !== false && l.stockCount > 0 && !l.isSold);
+    return [...available].sort((a, b) => {
+      if (a.createdAt && b.createdAt) return b.createdAt - a.createdAt;
+      if (a.createdAt) return -1;
+      if (b.createdAt) return 1;
+      const numA = Number(a.id.replace(/\D/g, '')) || 0;
+      const numB = Number(b.id.replace(/\D/g, '')) || 0;
+      return numB - numA;
+    }).slice(0, 3);
+  }, [laptops]);
 
   if (isAdminView) {
     return (
@@ -243,7 +272,13 @@ export default function App() {
                         </span>
                       </div>
 
+                      <p className="font-sans text-base sm:text-lg font-bold text-[#111111] pt-1 leading-snug">
+                        Get high-performance laptops you can trust without paying new-device prices.
+                      </p>
 
+                      <p className="font-mono text-xs sm:text-sm text-[#6B6B6B] leading-relaxed">
+                        Dedicated GPUs. High RAM. Fully tested. Real units. No surprises.
+                      </p>
                     </div>
 
                     {/* Combined CTA triggers */}
@@ -323,6 +358,16 @@ export default function App() {
 
             {/* Minimal guarantees strip */}
             <TrustStrip />
+
+            {/* Top 3 Latest Laptops Section */}
+            <TopLaptopsHome
+              topLaptops={top3Laptops}
+              onSelectLaptop={setSelectedLaptop}
+              onViewAll={() => {
+                setCurrentTab('shop');
+                setTimeout(() => scrollToId('available-laptops'), 100);
+              }}
+            />
 
             {/* Explore the best laptop for you CTA Button Section */}
             <section className="bg-white py-12 sm:py-16 border-b border-[#E5E5E5] flex flex-col items-center justify-center text-center px-4">
