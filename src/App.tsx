@@ -251,28 +251,28 @@ export default function App() {
                   {/* Left Column: Typography & CTAs */}
                   <div className="lg:col-span-7 space-y-6 sm:space-y-8 max-w-2xl">
                     <div className="space-y-4">
-                      <h1 className="font-display font-extrabold text-4xl sm:text-5xl lg:text-6xl text-[#111111] leading-[1.1] tracking-tight">
-                        Get a clean, reliable <br className="hidden sm:inline" />
-                        fairly used laptops <br className="hidden sm:inline" />
-                        for your <span className="text-neutral-400">everyday need.</span>
+                      <h1 className="font-display font-extrabold text-3xl sm:text-5xl lg:text-6xl text-[#111111] leading-[1.1] tracking-tight">
+                        Get a clean, reliable <br />
+                        fairly used laptops <br />
+                        for your everyday need.
                       </h1>
 
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-2.5 py-1 text-[10px] sm:text-xs font-mono font-bold text-[#111111] shadow-xs">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#FF3B30] mr-1.5" />
+                      <div className="flex flex-wrap gap-2 pt-2 pb-1">
+                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
+                          <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
                           Tested
                         </span>
-                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-2.5 py-1 text-[10px] sm:text-xs font-mono font-bold text-[#111111] shadow-xs">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#FF3B30] mr-1.5" />
+                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
+                          <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
                           Verified
                         </span>
-                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-2.5 py-1 text-[10px] sm:text-xs font-mono font-bold text-[#111111] shadow-xs">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#FF3B30] mr-1.5" />
+                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
+                          <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
                           Ready to use
                         </span>
                       </div>
 
-                      <p className="font-sans text-base sm:text-lg font-bold text-[#111111] pt-1 leading-snug">
+                      <p className="font-sans text-base sm:text-lg font-bold text-[#111111] leading-snug pt-1">
                         Get high-performance laptops you can trust without paying new-device prices.
                       </p>
 
