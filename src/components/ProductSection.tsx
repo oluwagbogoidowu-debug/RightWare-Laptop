@@ -106,9 +106,6 @@ export default function ProductSection({
             <h2 className="font-display font-bold text-3xl sm:text-4xl text-[#111111] mt-2 tracking-tight">
               Verified Device Catalog
             </h2>
-            <p className="font-sans text-xs sm:text-sm text-[#6B6B6B] mt-1">
-              Browse our high-demand certified workstations and recently delivered units. Click any laptop to inspect full diagnostics.
-            </p>
           </div>
 
           {/* Search Box */}

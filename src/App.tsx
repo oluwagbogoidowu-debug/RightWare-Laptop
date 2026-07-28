@@ -246,6 +246,16 @@ export default function App() {
         }} 
         availableCount={laptops.filter(l => l.isForSale !== false).length}
         onTabChange={(tab) => setCurrentTab(tab)}
+        onNavigateToShopBy={(page) => {
+          setShopByPage(page);
+          setCurrentTab('shop');
+          setTimeout(() => scrollToId('shop-by-section'), 100);
+        }}
+        onSelectCategoryFilter={(type, value) => {
+          handleSelectCategoryFilter(type, value);
+          setCurrentTab('shop');
+          setTimeout(() => scrollToId('available-laptops'), 100);
+        }}
       />
 
       {/* Main Container */}
@@ -341,7 +351,7 @@ export default function App() {
             </section>
 
             {/* Explore the best laptops Section */}
-            <section className="py-16 sm:py-24 bg-[#FAF9F9] border-b border-[#E5E5E5]">
+            <section id="curated-workstations" className="py-16 sm:py-24 bg-[#FAF9F9] border-b border-[#E5E5E5]">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
                   <span className="font-mono text-xs uppercase tracking-widest text-[#FF3B30] font-bold block mb-3">

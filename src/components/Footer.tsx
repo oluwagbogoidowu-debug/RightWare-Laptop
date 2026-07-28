@@ -88,13 +88,6 @@ export default function Footer() {
 
         <div className="border-t border-[#333333] mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between font-sans text-xs text-[#666666]">
           <p>© 2026 Rightware Laptops. All rights reserved. Premium Verified Stock.</p>
-          <div className="flex space-x-6 mt-4 sm:mt-0 font-mono text-[10px]">
-            <span className="hover:text-white transition-colors">Sourced Responsibly</span>
-            <span className="text-[#FF3B30]">•</span>
-            <span className="hover:text-white transition-colors">Price Match Verified</span>
-            <span className="text-[#FF3B30]">•</span>
-            <span className="hover:text-white transition-colors">Testing Standard v4.5</span>
-          </div>
         </div>
       </div>
     </footer>

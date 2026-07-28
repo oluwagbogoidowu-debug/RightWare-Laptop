@@ -28,7 +28,7 @@ export default function TopLaptopsHome({
   };
 
   return (
-    <section className="py-12 sm:py-16 bg-white border-b border-[#E5E5E5]">
+    <section id="top-3-laptops" className="py-12 sm:py-16 bg-white border-b border-[#E5E5E5]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header Header */}
