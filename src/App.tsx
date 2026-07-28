@@ -250,35 +250,43 @@ export default function App() {
                   
                   {/* Left Column: Typography & CTAs */}
                   <div className="lg:col-span-7 space-y-6 sm:space-y-8 max-w-2xl">
-                    <div className="space-y-4">
-                      <h1 className="font-display font-extrabold text-3xl sm:text-5xl lg:text-6xl text-[#111111] leading-[1.1] tracking-tight">
-                        Get a clean, reliable <br />
-                        fairly used laptops <br />
-                        for your everyday need.
+                    <div className="flex flex-col gap-4">
+                      {/* Main Headline */}
+                      <h1 className="order-1 md:order-2 font-display font-extrabold text-3xl sm:text-5xl lg:text-6xl text-[#111111] leading-[1.15] tracking-tight">
+                        Get high-performance laptops you can trust without paying new-device prices.
                       </h1>
 
-                      <div className="flex flex-wrap gap-2 pt-2 pb-1">
-                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
-                          <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
-                          Tested
-                        </span>
-                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
-                          <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
-                          Verified
-                        </span>
-                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
-                          <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
-                          Ready to use
+                      {/* 80%+ Guaranteed Battery Badge (In front of headline on desktop, below headline on mobile) */}
+                      <div className="order-2 md:order-1 flex items-center">
+                        <span className="inline-flex items-center bg-emerald-50 text-emerald-800 border border-emerald-200 px-3.5 py-1.5 text-xs font-mono font-bold shadow-xs">
+                          <Battery className="h-4 w-4 text-emerald-600 mr-2 flex-shrink-0" />
+                          80%+ Guaranteed Battery
                         </span>
                       </div>
 
-                      <p className="font-sans text-base sm:text-lg font-bold text-[#111111] leading-snug pt-1">
-                        Get high-performance laptops you can trust without paying new-device prices.
-                      </p>
-
-                      <p className="font-mono text-xs sm:text-sm text-[#6B6B6B] leading-relaxed">
-                        Dedicated GPUs. High RAM. Fully tested. Real units. No surprises.
-                      </p>
+                      {/* Feature Badges */}
+                      <div className="order-3 flex flex-wrap gap-2 pt-1">
+                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
+                          <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
+                          Dedicated GPUs
+                        </span>
+                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
+                          <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
+                          High RAM
+                        </span>
+                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
+                          <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
+                          Fully tested
+                        </span>
+                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
+                          <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
+                          Real units
+                        </span>
+                        <span className="inline-flex items-center bg-white border border-[#E5E5E5] px-3 py-1.5 text-xs font-mono font-bold text-[#111111]">
+                          <span className="h-2 w-2 rounded-full bg-[#FF3B30] mr-2" />
+                          No surprises
+                        </span>
+                      </div>
                     </div>
 
                     {/* Combined CTA triggers */}
