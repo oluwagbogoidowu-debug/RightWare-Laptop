@@ -483,29 +483,6 @@ export default function App() {
         ) : (
           <>
             {/* SHOP VIEW */}
-            {/* Shop Header Banner */}
-            <section className="bg-white border-b border-[#E5E5E5] py-12 sm:py-16">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center sm:text-left flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-                <div>
-                  <span className="font-mono text-[10px] uppercase tracking-widest font-bold text-[#FF3B30]">
-                    Lagos Certified Pre-Owned
-                  </span>
-                  <h1 className="font-display font-extrabold text-3xl sm:text-4xl text-[#111111] mt-1.5 tracking-tight">
-                    Inventory Catalog
-                  </h1>
-                  <p className="font-sans text-xs sm:text-sm text-[#6B6B6B] mt-2 max-w-xl leading-relaxed">
-                    Check specific specs, real physical photos, diagnostic status, and battery logs for every individual device. Ready for immediate pickup or delivery.
-                  </p>
-                </div>
-
-                <div className="flex-shrink-0 flex items-center justify-center sm:justify-start gap-3">
-                  <span className="font-mono text-xs text-neutral-400">Total Live Listings:</span>
-                  <span className="bg-[#111111] text-white font-mono text-sm font-bold px-3 py-1.5 rounded-none border border-transparent">
-                    {laptops.filter(l => l.isForSale !== false).length}
-                  </span>
-                </div>
-              </div>
-            </section>
 
             {/* Category breakdown selection */}
             <ShopBySection
