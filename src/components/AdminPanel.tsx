@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CustomSelect } from './CustomSelect';
+import { CustomSelect, CustomMultiSelect } from './CustomSelect';
 import { Laptop, LaptopCondition, LaptopSpecs } from '../types';
 import { saveLaptopToFirestore, deleteLaptopFromFirestore } from '../lib/firebaseService';
 import { uploadToCloudinary } from '../lib/cloudinaryService';
@@ -958,10 +958,12 @@ export default function AdminPanel({
   }
 
   return (
-    <div className="min-h-screen bg-[#EFEFEF] text-[#111111] font-sans selection:bg-[#FF3B30] selection:text-white py-4 sm:py-8 px-2 sm:px-6 lg:px-8 flex flex-col justify-between">
+    <div className="min-h-screen bg-white text-[#111111] font-sans selection:bg-[#FF3B30] selection:text-white flex flex-col justify-between w-full">
       
-      {/* Boxed Separate Admin Workspace Container */}
-      <div className="max-w-7xl w-full mx-auto bg-white border border-[#D4D4D4] border-t-4 border-t-[#FF3B30] shadow-xl flex flex-col min-h-[85vh]">
+      {/* Full Bleed Admin Workspace */}
+      <div className="w-full bg-white flex flex-col min-h-screen">
+        
+        {/* Admin Header */}
         
         {/* Admin Header */}
         <header className="bg-white border-b border-[#E5E5E5] px-4 sm:px-8 py-5">
@@ -1322,14 +1324,13 @@ export default function AdminPanel({
                   </div>
 
                   <div>
-                    <CustomSelect
-                      label="Primary Use Case"
+                    <CustomMultiSelect
+                      label="Primary Use Case(s)"
                       required
                       value={formCategory}
                       options={USE_CASE_OPTIONS}
                       onChange={setFormCategory}
-                      placeholder="-- Select Primary Use Case --"
-                      customPlaceholder="Type custom use case..."
+                      placeholder="-- Select Primary Use Case(s) --"
                     />
                   </div>
                 </div>
@@ -1776,39 +1777,52 @@ export default function AdminPanel({
           </div>
         )}
 
-        {/* EDIT LAPTOP MODAL */}
+        {/* EDIT LAPTOP FULL BLEED VIEW */}
         {editingLaptop && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-white border border-[#111111] max-w-4xl w-full my-8 p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto relative shadow-2xl">
-              
-              {/* Header */}
-              <div className="flex items-start justify-between border-b border-[#E5E5E5] pb-4">
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <span className="font-mono text-[10px] text-[#FF3B30] uppercase font-bold tracking-widest flex items-center space-x-1">
-                      <Edit3 className="h-3.5 w-3.5" />
-                      <span>Editing Listing & Database Images</span>
-                    </span>
-                    <span className="inline-flex items-center space-x-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 border border-emerald-200 font-mono text-[9px] font-bold">
-                      <Database className="h-3 w-3 text-emerald-600" />
-                      <span>Firestore Sync</span>
-                    </span>
-                  </div>
-                  <h2 className="font-display font-bold text-lg text-[#111111] mt-1">
-                    {editingLaptop.name}
-                  </h2>
-                  <p className="font-mono text-[11px] text-neutral-500 mt-0.5">
-                    S/N: {editingLaptop.serialNumber} • ID: {editingLaptop.id}
-                  </p>
-                </div>
+          <div className="fixed inset-0 z-50 bg-[#FAF9F9] overflow-y-auto flex flex-col w-full h-full">
+            {/* Header Sticky Full Bleed Bar */}
+            <header className="sticky top-0 z-30 bg-white border-b border-[#E5E5E5] py-4 px-4 sm:px-6 lg:px-8 flex items-center justify-between shadow-xs">
+              <div className="flex items-center space-x-3">
                 <button
                   type="button"
                   onClick={() => setEditingLaptop(null)}
-                  className="p-2 text-neutral-400 hover:text-[#111111] hover:bg-neutral-100 transition-colors cursor-pointer"
+                  className="group flex items-center space-x-2 text-[#111111] hover:text-[#FF3B30] transition-colors cursor-pointer font-sans text-xs font-bold uppercase tracking-wider"
                 >
-                  <X className="h-5 w-5" />
+                  <ArrowLeft className="h-4 w-4 transform group-hover:-translate-x-1 transition-transform" />
+                  <span>Back to Inventory</span>
                 </button>
+                <div className="h-4 w-px bg-neutral-300 hidden sm:block" />
+                <div className="flex items-center space-x-2">
+                  <span className="font-mono text-[10px] text-[#FF3B30] uppercase font-bold tracking-widest flex items-center space-x-1">
+                    <Edit3 className="h-3.5 w-3.5" />
+                    <span>Edit Listing</span>
+                  </span>
+                </div>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setEditingLaptop(null)}
+                className="bg-neutral-100 hover:bg-[#FF3B30] text-[#111111] hover:text-white p-2 transition-colors cursor-pointer rounded-xs"
+                title="Close Editor"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </header>
+
+            {/* Content Container */}
+            <div className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <div className="bg-white border border-[#E5E5E5] p-6 sm:p-8 space-y-6 shadow-xs">
+                
+                {/* Header info */}
+                <div className="border-b border-[#E5E5E5] pb-4">
+                  <h2 className="font-display font-bold text-xl text-[#111111]">
+                    {editingLaptop.name}
+                  </h2>
+                  <p className="font-mono text-xs text-neutral-500 mt-1">
+                    S/N: {editingLaptop.serialNumber} • ID: {editingLaptop.id}
+                  </p>
+                </div>
 
               <form onSubmit={handleSaveEditLaptop} className="space-y-6">
                 
@@ -1877,14 +1891,13 @@ export default function AdminPanel({
                   </div>
 
                   <div>
-                    <CustomSelect
-                      label="Primary Use Case"
+                    <CustomMultiSelect
+                      label="Primary Use Case(s)"
                       required
-                      value={editForm.useCategory || 'Business / Office Work'}
+                      value={editForm.useCategory || ''}
                       options={USE_CASE_OPTIONS}
                       onChange={(val) => setEditForm((prev) => ({ ...prev, useCategory: val }))}
-                      placeholder="-- Select Primary Use Case --"
-                      customPlaceholder="Type custom use case..."
+                      placeholder="-- Select Primary Use Case(s) --"
                     />
                   </div>
 
@@ -1989,7 +2002,21 @@ export default function AdminPanel({
                   </div>
                 </div>
 
-                {/* Section 3: Database Image Manager */}
+                {/* Section 3: Detailed Condition & Diagnostic Description */}
+                <div className="space-y-1.5 border border-[#E5E5E5] p-4 bg-white">
+                  <label className="block font-sans text-xs font-bold text-neutral-700">
+                    Detailed Condition & Diagnostic Description
+                  </label>
+                  <textarea
+                    value={editForm.description || ''}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
+                    rows={3}
+                    placeholder="Write a custom description explaining cosmetic scuffs, screen health, hinge quality, or charging items included..."
+                    className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
+                  />
+                </div>
+
+                {/* Section 4: Database Image Manager */}
                 <div className="space-y-3 border border-[#E5E5E5] p-4 bg-white">
                   <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-2">
                     <div>
@@ -2127,15 +2154,15 @@ export default function AdminPanel({
                     disabled={isSubmitting}
                     className="px-6 py-2.5 bg-[#FF3B30] hover:bg-[#D92D20] text-white font-mono text-xs font-bold uppercase tracking-wider flex items-center space-x-2 cursor-pointer transition-colors shadow-xs"
                   >
-                    <Database className="h-4 w-4" />
-                    <span>{isSubmitting ? 'Saving to Database...' : 'Save Changes & Sync Database'}</span>
+                    <span>{isSubmitting ? 'Saving...' : 'Save Changes'}</span>
                   </button>
                 </div>
 
               </form>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
       </main>
 

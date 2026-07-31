@@ -47,7 +47,7 @@ export interface Testimonial {
 
 export type FilterBudget = 'all' | 'under-400' | '400-700' | '700-1000' | 'above-1000';
 export type FilterBrand = 'all' | 'Apple' | 'Dell' | 'Lenovo' | 'HP';
-export type FilterUse = 'all' | 'School' | 'Work' | 'Design';
+export type FilterUse = 'all' | string;
 
 export interface FilterState {
   budget: FilterBudget;

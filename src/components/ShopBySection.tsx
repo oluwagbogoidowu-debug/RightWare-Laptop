@@ -1,7 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { FilterBudget, FilterBrand, FilterUse } from '../types';
-import { DollarSign, Cpu, Laptop, GraduationCap, Briefcase, Palette, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { FilterBudget, FilterBrand, FilterUse, Laptop } from '../types';
+import { 
+  Briefcase, 
+  GraduationCap, 
+  Code, 
+  Layout, 
+  Palette, 
+  Video, 
+  Box, 
+  Gamepad2, 
+  Radio, 
+  BarChart3, 
+  Cpu, 
+  ShieldCheck, 
+  Music, 
+  Laptop as LaptopIcon,
+  ChevronLeft, 
+  ChevronRight, 
+  Check 
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { USE_CASE_OPTIONS } from './AdminPanel';
+
+export function isUseCaseMatching(laptopCategory: string | undefined, targetUseCase: string): boolean {
+  if (!laptopCategory || !targetUseCase) return false;
+  if (targetUseCase === 'all') return true;
+  const cat = laptopCategory.toLowerCase().trim();
+  const target = targetUseCase.toLowerCase().trim();
+
+  if (cat === target) return true;
+  if (cat.includes(target) || target.includes(cat)) return true;
+
+  if ((target.includes('school') || target.includes('student')) && (cat.includes('school') || cat.includes('student'))) return true;
+  if ((target.includes('business') || target.includes('office') || target.includes('work')) && (cat.includes('work') || cat.includes('business') || cat.includes('office'))) return true;
+  if ((target.includes('design') || target.includes('graphic') || target.includes('ui/ux')) && (cat.includes('design') || cat.includes('creative'))) return true;
+
+  return false;
+}
 
 interface ShopBySectionProps {
   onSelectFilter: (type: 'budget' | 'brand' | 'use', value: any) => void;
@@ -10,6 +45,7 @@ interface ShopBySectionProps {
   activeUse: FilterUse;
   activePage?: number;
   onPageChange?: (page: number) => void;
+  laptops?: Laptop[];
 }
 
 export default function ShopBySection({
@@ -18,10 +54,12 @@ export default function ShopBySection({
   activeBrand,
   activeUse,
   activePage = 0,
-  onPageChange
+  onPageChange,
+  laptops = []
 }: ShopBySectionProps) {
   const [currentPage, setCurrentPage] = useState<number>(activePage);
   const [direction, setDirection] = useState<number>(0);
+  const [useCaseSubPage, setUseCaseSubPage] = useState<number>(0);
 
   useEffect(() => {
     if (activePage !== undefined && activePage !== currentPage) {
@@ -44,11 +82,64 @@ export default function ShopBySection({
     { name: 'HP', count: 2, image: 'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?auto=format&fit=crop&w=300&q=80' }
   ];
 
-  const uses: { label: FilterUse; icon: React.ReactNode; desc: string }[] = [
-    { label: 'School', icon: <GraduationCap className="h-5 w-5 text-[#FF3B30]" />, desc: 'Lightweight, long battery, perfect for writing & slides' },
-    { label: 'Work', icon: <Briefcase className="h-5 w-5 text-[#FF3B30]" />, desc: 'Elite processors, extreme reliability, coding & spreadsheets' },
-    { label: 'Design', icon: <Palette className="h-5 w-5 text-[#FF3B30]" />, desc: 'Vibrant color-accurate displays, powerful graphic rendering' }
-  ];
+  const useCaseIcons: Record<string, { icon: React.ReactNode; desc: string }> = {
+    'Business / Office Work': {
+      icon: <Briefcase className="h-4 w-4 text-[#FF3B30]" />,
+      desc: 'Spreadsheets, emails, video meetings & office suites'
+    },
+    'Student / School Use': {
+      icon: <GraduationCap className="h-4 w-4 text-[#FF3B30]" />,
+      desc: 'Lightweight, long battery life for lectures & research'
+    },
+    'Programming / Development': {
+      icon: <Code className="h-4 w-4 text-[#FF3B30]" />,
+      desc: 'High RAM & fast multi-core CPUs for compilation & Docker'
+    },
+    'UI/UX Design': {
+      icon: <Layout className="h-4 w-4 text-[#FF3B30]" />,
+      desc: 'Figma, Adobe XD, crisp high-res color displays'
+    },
+    'Graphic Design': {
+      icon: <Palette className="h-4 w-4 text-[#FF3B30]" />,
+      desc: 'Photoshop, Illustrator & color-accurate screen gamut'
+    },
+    'Video Editing': {
+      icon: <Video className="h-4 w-4 text-[#FF3B30]" />,
+      desc: 'Premiere Pro, DaVinci Resolve & GPU rendering'
+    },
+    '3D Modeling / Animation': {
+      icon: <Box className="h-4 w-4 text-[#FF3B30]" />,
+      desc: 'Blender, Maya, AutoCAD & heavy VRAM raytracing'
+    },
+    'Gaming': {
+      icon: <Gamepad2 className="h-4 w-4 text-[#FF3B30]" />,
+      desc: 'Dedicated GPUs, high refresh rate displays & cooling'
+    },
+    'Streaming / Content Creation': {
+      icon: <Radio className="h-4 w-4 text-[#FF3B30]" />,
+      desc: 'OBS recording, multi-tasking & webcam encoding'
+    },
+    'Data Analysis': {
+      icon: <BarChart3 className="h-4 w-4 text-[#FF3B30]" />,
+      desc: 'Python, R, Excel power queries & big dataset RAM'
+    },
+    'Machine Learning / AI': {
+      icon: <Cpu className="h-4 w-4 text-[#FF3B30]" />,
+      desc: 'CUDA cores, Neural Engines & heavy local LLM inference'
+    },
+    'Cybersecurity / Networking': {
+      icon: <ShieldCheck className="h-4 w-4 text-[#FF3B30]" />,
+      desc: 'Virtual machines, Wireshark & security lab tools'
+    },
+    'Music Production': {
+      icon: <Music className="h-4 w-4 text-[#FF3B30]" />,
+      desc: 'FL Studio, Logic Pro, low-latency audio processing'
+    },
+    'General Everyday Use': {
+      icon: <LaptopIcon className="h-4 w-4 text-[#FF3B30]" />,
+      desc: 'Web browsing, media streaming & daily home tasks'
+    }
+  };
 
   const handlePageChange = (newPage: number) => {
     setDirection(newPage > currentPage ? 1 : -1);
@@ -71,7 +162,7 @@ export default function ShopBySection({
   };
 
   const handleDragEnd = (event: any, info: any) => {
-    const threshold = 40; // horizontal swipe detection threshold
+    const threshold = 40;
     if (info.offset.x < -threshold) {
       handleNext();
     } else if (info.offset.x > threshold) {
@@ -85,7 +176,7 @@ export default function ShopBySection({
         return {
           tag: '[A] Workflows',
           title: 'Browse by Use Case',
-          desc: 'Find the perfect match for your daily workload.'
+          desc: 'Select a primary use case configured from laptop setup.'
         };
       case 1:
         return {
@@ -105,6 +196,10 @@ export default function ShopBySection({
 
   const activeHeader = getHeaderDetails();
 
+  // Calculate 4 by 4 pagination items for Use Cases
+  const totalUseCaseSubPages = Math.ceil(USE_CASE_OPTIONS.length / 4);
+  const currentUseCases = USE_CASE_OPTIONS.slice(useCaseSubPage * 4, (useCaseSubPage + 1) * 4);
+
   return (
     <section id="shop-by-section" className="py-16 sm:py-24 bg-white border-t border-[#E5E5E5]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center">
@@ -117,10 +212,10 @@ export default function ShopBySection({
         </div>
 
         {/* Swipe Card Container */}
-        <div className="w-full max-w-xl relative">
+        <div className="w-full max-w-2xl relative">
           
           {/* Card Body */}
-          <div className="bg-white border border-[#E5E5E5] p-6 sm:p-8 shadow-xs relative overflow-hidden min-h-[440px] flex flex-col justify-between select-none">
+          <div className="bg-white border border-[#E5E5E5] p-6 sm:p-8 shadow-xs relative overflow-hidden min-h-[460px] flex flex-col justify-between select-none">
             
             {/* Pagination Dots in Top Right */}
             <div className="absolute top-6 right-6 flex items-center space-x-1.5 z-20">
@@ -172,41 +267,107 @@ export default function ShopBySection({
                     {/* Active Tab Elements */}
                     <div className="space-y-3">
                       
-                      {/* PAGE 0: Browse by Use Case */}
+                      {/* PAGE 0: Browse by Use Case (Listed 4 by 4 with Real-time count & See More button) */}
                       {currentPage === 0 && (
-                        <div className="space-y-2.5">
-                          {uses.map((use) => {
-                            const isSelected = activeUse === use.label;
-                            return (
-                              <button
-                                key={use.label}
-                                onClick={() => onSelectFilter('use', use.label)}
-                                className={`w-full text-left p-3.5 border transition-all flex items-start space-x-3.5 cursor-pointer ${
-                                  isSelected 
-                                    ? 'border-[#FF3B30] bg-[#FF3B30]/5 shadow-xs' 
-                                    : 'border-[#E5E5E5] hover:border-[#111111] hover:bg-neutral-50'
-                                }`}
-                              >
-                                <div className="bg-white p-2 border border-[#E5E5E5] flex-shrink-0">
-                                  {use.icon}
+                        <div className="space-y-3">
+                          <div className="space-y-2.5">
+                            {currentUseCases.map((useCaseName) => {
+                              const meta = useCaseIcons[useCaseName] || {
+                                icon: <LaptopIcon className="h-4 w-4 text-[#FF3B30]" />,
+                                desc: 'High-performance laptop workstation'
+                              };
+
+                              const isSelected = activeUse === useCaseName;
+
+                              // Real-time connected laptops count
+                              const connectedCount = laptops.filter(
+                                (l) => l.isForSale !== false && !l.isSold && isUseCaseMatching(l.useCategory, useCaseName)
+                              ).length;
+
+                              return (
+                                <div
+                                  key={useCaseName}
+                                  onClick={() => onSelectFilter('use', useCaseName)}
+                                  className={`w-full text-left p-3.5 border transition-all flex items-center justify-between cursor-pointer group ${
+                                    isSelected 
+                                      ? 'border-[#FF3B30] bg-[#FF3B30]/5 shadow-xs' 
+                                      : 'border-[#E5E5E5] hover:border-[#111111] hover:bg-neutral-50'
+                                  }`}
+                                >
+                                  <div className="flex items-center space-x-3.5 min-w-0 flex-1 pr-3">
+                                    <div className="bg-white p-2 border border-[#E5E5E5] flex-shrink-0 group-hover:border-[#FF3B30] transition-colors">
+                                      {meta.icon}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                                        <span className="font-display font-bold text-xs sm:text-sm text-[#111111] truncate">
+                                          {useCaseName}
+                                        </span>
+                                        {connectedCount > 0 && (
+                                          <span className="inline-flex items-center space-x-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 border border-emerald-200 font-mono text-[9px] font-bold">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                            <span>{connectedCount} connected</span>
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="font-sans text-[11px] text-[#6B6B6B] mt-0.5 truncate">
+                                        {meta.desc}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  {/* Active check mark or arrow indicator */}
+                                  {isSelected && (
+                                    <span className="flex-shrink-0 text-[10px] font-mono font-bold px-2.5 py-1 bg-[#FF3B30] text-white flex items-center space-x-1 shadow-2xs">
+                                      <Check className="h-3 w-3" />
+                                      <span>Selected</span>
+                                    </span>
+                                  )}
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <span className="font-display font-bold text-xs sm:text-sm text-[#111111] flex items-center justify-between">
-                                    <span>{use.label} Workstation</span>
-                                    {isSelected && (
-                                      <span className="text-[10px] font-mono text-[#FF3B30] font-bold uppercase tracking-wider flex items-center space-x-1">
-                                        <Check className="h-3 w-3 inline" />
-                                        <span>Active</span>
-                                      </span>
-                                    )}
-                                  </span>
-                                  <p className="font-sans text-[11px] text-[#6B6B6B] mt-1 leading-relaxed">
-                                    {use.desc}
-                                  </p>
-                                </div>
-                              </button>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
+
+                          {/* 4 BY 4 NEXT AND PREVIOUS PAGINATION */}
+                          <div className="flex items-center justify-between pt-3 border-t border-[#E5E5E5] text-xs font-mono">
+                            <button
+                              type="button"
+                              disabled={useCaseSubPage === 0}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setUseCaseSubPage((prev) => Math.max(0, prev - 1));
+                              }}
+                              className={`flex items-center space-x-1 px-3 py-1.5 border transition-colors cursor-pointer ${
+                                useCaseSubPage === 0
+                                  ? 'opacity-30 cursor-not-allowed border-[#E5E5E5] text-neutral-400'
+                                  : 'border-[#111111] text-[#111111] hover:bg-[#FF3B30] hover:text-white hover:border-[#FF3B30]'
+                              }`}
+                            >
+                              <ChevronLeft className="h-3.5 w-3.5" />
+                              <span>Previous</span>
+                            </button>
+
+                            <span className="font-bold text-[11px] text-[#111111]">
+                              {useCaseSubPage + 1} of {totalUseCaseSubPages}
+                            </span>
+
+                            <button
+                              type="button"
+                              disabled={useCaseSubPage >= totalUseCaseSubPages - 1}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setUseCaseSubPage((prev) => Math.min(totalUseCaseSubPages - 1, prev + 1));
+                              }}
+                              className={`flex items-center space-x-1 px-3 py-1.5 border transition-colors cursor-pointer ${
+                                useCaseSubPage >= totalUseCaseSubPages - 1
+                                  ? 'opacity-30 cursor-not-allowed border-[#E5E5E5] text-neutral-400'
+                                  : 'border-[#111111] text-[#111111] hover:bg-[#FF3B30] hover:text-white hover:border-[#FF3B30]'
+                              }`}
+                            >
+                              <span>Next</span>
+                              <ChevronRight className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </div>
                       )}
 

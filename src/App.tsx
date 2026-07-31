@@ -7,7 +7,7 @@ import { motion } from 'motion/react';
 
 // Import our modular custom components
 import Navbar from './components/Navbar';
-import ShopBySection from './components/ShopBySection';
+import ShopBySection, { isUseCaseMatching } from './components/ShopBySection';
 import ProductSection from './components/ProductSection';
 import HowItWorks from './components/HowItWorks';
 import Testimonials from './components/Testimonials';
@@ -157,7 +157,7 @@ export default function App() {
       }
 
       // 2. Use case match
-      if (filters.use !== 'all' && laptop.useCategory !== filters.use) {
+      if (filters.use !== 'all' && !isUseCaseMatching(laptop.useCategory, filters.use)) {
         return false;
       }
 
@@ -493,6 +493,7 @@ export default function App() {
 
             {/* Category breakdown selection */}
             <ShopBySection
+              laptops={laptops}
               onSelectFilter={handleSelectCategoryFilter}
               activeBudget={filters.budget}
               activeBrand={filters.brand}

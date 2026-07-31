@@ -3,6 +3,7 @@ import { Laptop } from '../types';
 import { SOLD_LAPTOPS } from '../data';
 import { ShieldCheck, Truck, MessageSquare } from 'lucide-react';
 import { formatNaira } from '../lib/utils';
+import SmartImage from './SmartImage';
 
 interface RecentlyDeliveredProps {
   soldLaptops?: Laptop[];
@@ -33,10 +34,9 @@ export default function RecentlyDelivered({ soldLaptops = SOLD_LAPTOPS }: Recent
               {/* Product Visual Container with SOLD Overlay */}
               <div>
                 <div className="relative aspect-[4/3] w-full overflow-hidden bg-white border border-[#E5E5E5]">
-                  <img
+                  <SmartImage
                     src={laptop.image}
                     alt={laptop.name}
-                    referrerPolicy="no-referrer"
                     className="w-full h-full object-cover filter grayscale group-hover:scale-105 transition-transform duration-300"
                   />
                   {/* SOLD banner */}

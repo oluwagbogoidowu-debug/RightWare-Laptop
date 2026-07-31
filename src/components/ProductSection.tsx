@@ -3,6 +3,7 @@ import { Laptop, FilterState, LaptopCondition } from '../types';
 import { Search, RotateCcw, AlertTriangle, ShieldCheck, Tag, ChevronDown, Check } from 'lucide-react';
 import { formatNaira } from '../lib/utils';
 import { BRAND_OPTIONS, USE_CASE_OPTIONS } from './AdminPanel';
+import SmartImage from './SmartImage';
 
 interface ProductSectionProps {
   laptops: Laptop[];
@@ -197,10 +198,9 @@ export default function ProductSection({
                 <div>
                   {/* Laptop Visual Card Container */}
                   <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#F7F7F7] border border-[#E5E5E5]">
-                    <img
+                    <SmartImage
                       src={laptop.image}
                       alt={laptop.name}
-                      referrerPolicy="no-referrer"
                       className={`w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out filter grayscale-[0.1] ${
                         laptop.isSold ? 'brightness-75 contrast-75' : ''
                       }`}

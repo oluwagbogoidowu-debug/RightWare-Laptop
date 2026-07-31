@@ -1,6 +1,7 @@
 import React from 'react';
 import { TESTIMONIALS } from '../data';
 import { Star, ShieldCheck } from 'lucide-react';
+import SmartImage from './SmartImage';
 
 export default function Testimonials() {
   return (
@@ -37,12 +38,13 @@ export default function Testimonials() {
               </div>
 
               <div className="flex items-center space-x-3.5 pt-6 mt-6 border-t border-[#F0F0F0]">
-                <img
-                  src={t.avatar}
-                  alt={t.name}
-                  referrerPolicy="no-referrer"
-                  className="h-10 w-10 rounded-full object-cover filter grayscale"
-                />
+                <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 border border-[#E5E5E5]">
+                  <SmartImage
+                    src={t.avatar}
+                    alt={t.name}
+                    className="w-full h-full object-cover filter grayscale"
+                  />
+                </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="font-display font-bold text-sm text-[#111111] truncate flex items-center space-x-1">
                     <span>{t.name}</span>

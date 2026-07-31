@@ -2,6 +2,7 @@ import React from 'react';
 import { Laptop } from '../types';
 import { formatNaira } from '../lib/utils';
 import { ShieldCheck, Tag, Battery, ChevronRight, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
+import SmartImage from './SmartImage';
 
 interface TopLaptopsHomeProps {
   topLaptops: Laptop[];
@@ -75,10 +76,9 @@ export default function TopLaptopsHome({
 
               {/* Image Container */}
               <div className="relative aspect-[16/10] w-full overflow-hidden bg-white border border-[#E5E5E5]">
-                <img
+                <SmartImage
                   src={laptop.image}
                   alt={laptop.name}
-                  referrerPolicy="no-referrer"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 filter grayscale-[0.05]"
                 />
 

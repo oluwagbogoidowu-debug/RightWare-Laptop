@@ -4,6 +4,7 @@ import { ArrowLeft, X, ShieldCheck, Battery, Cpu, HardDrive, Monitor, Check, Cal
 import { motion, AnimatePresence } from 'motion/react';
 import { createReservationInFirestore } from '../lib/firebaseService';
 import { formatNaira } from '../lib/utils';
+import SmartImage from './SmartImage';
 
 interface LaptopDetailsModalProps {
   laptop: Laptop | null;
@@ -116,15 +117,14 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
                 <div>
                   {/* Main Image Display */}
                   <div className="aspect-[4/3] w-full bg-white border border-[#E5E5E5] relative overflow-hidden">
-                    <img
+                    <SmartImage
                       src={activeImage || laptop.image}
                       alt={laptop.name}
-                      referrerPolicy="no-referrer"
                       className="w-full h-full object-cover animate-fade-in"
                     />
                     
                     {/* Active Serial Code Stamp */}
-                    <div className="absolute bottom-2 left-2 bg-[#111111] text-white px-2.5 py-1 text-[9px] font-mono tracking-widest uppercase">
+                    <div className="absolute bottom-2 left-2 bg-[#111111] text-white px-2.5 py-1 text-[9px] font-mono tracking-widest uppercase z-10">
                       UNIT S/N: {laptop.serialNumber}
                     </div>
                   </div>
@@ -140,7 +140,7 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
                             activeImage === img ? 'border-[#FF3B30] ring-1 ring-[#FF3B30]' : 'border-[#E5E5E5] hover:border-neutral-500'
                           }`}
                         >
-                          <img src={img} alt={`Thumbnail ${i}`} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                          <SmartImage src={img} alt={`Thumbnail ${i}`} className="w-full h-full object-cover" />
                         </button>
                       ))}
                     </div>

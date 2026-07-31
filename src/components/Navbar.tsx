@@ -122,35 +122,35 @@ export default function Navbar({
               className="fixed inset-0 z-50 bg-[#111111]/40 backdrop-blur-xs"
             />
 
-            {/* Sidebar Panel */}
+            {/* Full-screen Side Navigation Overlay */}
             <motion.div
               id="menu-sidebar"
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 220 }}
-              className="fixed top-0 right-0 bottom-0 z-50 w-full max-w-sm bg-white shadow-2xl flex flex-col border-l border-[#E5E5E5] h-full"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50 w-full h-full bg-white flex flex-col overflow-hidden"
             >
               {/* Header inside drawer */}
-              <div className="p-5 border-b border-[#E5E5E5] flex items-center justify-between bg-neutral-50/50">
-                <div className="flex items-center gap-2">
-                  <Laptop className="h-5 w-5 text-[#FF3B30] flex-shrink-0" />
-                  <span className="font-display text-lg font-bold tracking-tight text-[#111111]">
-                    Navigation
+              <div className="p-5 sm:px-8 border-b border-[#E5E5E5] flex items-center justify-between bg-white max-w-5xl w-full mx-auto">
+                <div className="flex items-center gap-2.5">
+                  <Laptop className="h-6 w-6 text-[#FF3B30] flex-shrink-0" />
+                  <span className="font-display text-xl font-extrabold tracking-tight text-[#111111]">
+                    Rightware
                   </span>
                 </div>
                 <button 
                   id="menu-close-btn"
                   onClick={() => setMenuOpen(false)}
-                  className="w-9 h-9 flex items-center justify-center text-[#6B6B6B] hover:text-[#111111] hover:bg-neutral-200/60 transition-all cursor-pointer rounded-sm border border-transparent hover:border-[#E5E5E5]"
+                  className="w-10 h-10 flex items-center justify-center text-[#111111] hover:text-[#FF3B30] hover:bg-neutral-100 transition-all cursor-pointer rounded-sm border border-[#E5E5E5]"
                   aria-label="Close Menu"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-6 w-6" />
                 </button>
               </div>
 
               {/* Navigation Links List */}
-              <div className="flex-grow overflow-y-auto p-5 space-y-6">
+              <div className="flex-grow overflow-y-auto p-5 sm:p-8 max-w-5xl w-full mx-auto space-y-6">
 
                 {/* Primary Views */}
                 <div className="space-y-1">
@@ -380,32 +380,34 @@ export default function Navbar({
               </div>
 
               {/* Footer inside Drawer (Lagos Store & Shipping Details) */}
-              <div className="p-5 bg-neutral-50 border-t border-[#E5E5E5] space-y-3">
-                <div className="flex items-start space-x-2.5">
-                  <div className="p-1 bg-white border border-[#E5E5E5] rounded-xs mt-0.5">
-                    <MapPin className="h-3.5 w-3.5 text-[#FF3B30]" />
+              <div className="p-5 sm:px-8 bg-neutral-50 border-t border-[#E5E5E5] flex-shrink-0">
+                <div className="max-w-5xl w-full mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-start space-x-2.5">
+                    <div className="p-1 bg-white border border-[#E5E5E5] rounded-xs mt-0.5">
+                      <MapPin className="h-3.5 w-3.5 text-[#FF3B30]" />
+                    </div>
+                    <div>
+                      <h4 className="font-sans font-bold text-[11px] text-[#111111] uppercase tracking-wider">
+                        Lagos Store & Delivery
+                      </h4>
+                      <p className="font-sans text-[11px] text-[#6B6B6B] mt-0.5 leading-relaxed">
+                        Lagos Mainland & Island express delivery.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-sans font-bold text-[11px] text-[#111111] uppercase tracking-wider">
-                      Lagos Store & Delivery
-                    </h4>
-                    <p className="font-sans text-[11px] text-[#6B6B6B] mt-0.5 leading-relaxed">
-                      Lagos Mainland & Island express delivery.
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex items-start space-x-2.5">
-                  <div className="p-1 bg-white border border-[#E5E5E5] rounded-xs mt-0.5">
-                    <Clock className="h-3.5 w-3.5 text-[#6B6B6B]" />
-                  </div>
-                  <div>
-                    <h4 className="font-sans font-bold text-[11px] text-[#111111] uppercase tracking-wider">
-                      Opening Hours
-                    </h4>
-                    <p className="font-mono text-[11px] text-[#6B6B6B] mt-0.5">
-                      Mon - Sat: 9 AM - 6 PM
-                    </p>
+                  <div className="flex items-start space-x-2.5">
+                    <div className="p-1 bg-white border border-[#E5E5E5] rounded-xs mt-0.5">
+                      <Clock className="h-3.5 w-3.5 text-[#6B6B6B]" />
+                    </div>
+                    <div>
+                      <h4 className="font-sans font-bold text-[11px] text-[#111111] uppercase tracking-wider">
+                        Opening Hours
+                      </h4>
+                      <p className="font-mono text-[11px] text-[#6B6B6B] mt-0.5">
+                        Mon - Sat: 9 AM - 6 PM
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
