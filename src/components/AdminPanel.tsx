@@ -436,16 +436,65 @@ export default function AdminPanel({
     e.target.value = '';
   };
 
+  const getDuplicateImageWarning = (inputUrl: string, currentImagesList: string[], excludeLaptopId?: string) => {
+    if (!inputUrl.trim()) return null;
+    const rawInput = inputUrl.trim();
+    const links = rawInput.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+
+    for (const rawLink of links) {
+      const converted = convertGoogleDriveUrl(rawLink);
+      // Check if already in current list
+      if (currentImagesList.some((img) => img === converted || img === rawLink)) {
+        return 'This image URL is already in the selected list for this laptop!';
+      }
+      // Check across existing inventory laptops
+      const existingLaptop = laptops.find(
+        (l) =>
+          l.id !== excludeLaptopId &&
+          (l.image === converted ||
+            l.image === rawLink ||
+            l.additionalImages?.includes(converted) ||
+            l.additionalImages?.includes(rawLink))
+      );
+      if (existingLaptop) {
+        return `This image URL is already in use by laptop "${existingLaptop.name}" (${existingLaptop.serialNumber || existingLaptop.brand}).`;
+      }
+    }
+    return null;
+  };
+
   const handleAddDriveUrl = () => {
     if (!driveLinkInput.trim()) return;
     const rawInput = driveLinkInput.trim();
     const links = rawInput.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
     const convertedLinks = links.map(convertGoogleDriveUrl);
 
-    if (convertedLinks.length > 0) {
-      setFormImages((prev) => [...prev, ...convertedLinks]);
+    const duplicates: string[] = [];
+    const uniqueLinks: string[] = [];
+
+    for (const link of convertedLinks) {
+      const isAlreadyInCurrent = formImages.includes(link);
+      const isAlreadyInStore = laptops.some(
+        (l) => l.image === link || l.additionalImages?.includes(link)
+      );
+
+      if (isAlreadyInCurrent || isAlreadyInStore) {
+        duplicates.push(link);
+      } else {
+        uniqueLinks.push(link);
+      }
+    }
+
+    if (duplicates.length > 0) {
+      triggerNotification(`⚠️ Duplication Alert: Skipped ${duplicates.length} duplicate image URL(s) already in use.`);
+    }
+
+    if (uniqueLinks.length > 0) {
+      setFormImages((prev) => [...prev, ...uniqueLinks]);
       setDriveLinkInput('');
-      triggerNotification(`Added ${convertedLinks.length} Google Drive/Web image(s).`);
+      triggerNotification(`Added ${uniqueLinks.length} new Google Drive/Web image(s).`);
+    } else if (duplicates.length > 0) {
+      setDriveLinkInput('');
     }
   };
 
@@ -527,10 +576,32 @@ export default function AdminPanel({
     const links = rawInput.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
     const convertedLinks = links.map(convertGoogleDriveUrl);
 
-    if (convertedLinks.length > 0) {
-      setEditImages((prev) => [...prev, ...convertedLinks]);
+    const duplicates: string[] = [];
+    const uniqueLinks: string[] = [];
+
+    for (const link of convertedLinks) {
+      const isAlreadyInCurrent = editImages.includes(link);
+      const isAlreadyInStore = laptops.some(
+        (l) => l.id !== editingLaptop?.id && (l.image === link || l.additionalImages?.includes(link))
+      );
+
+      if (isAlreadyInCurrent || isAlreadyInStore) {
+        duplicates.push(link);
+      } else {
+        uniqueLinks.push(link);
+      }
+    }
+
+    if (duplicates.length > 0) {
+      triggerNotification(`⚠️ Duplication Alert: Skipped ${duplicates.length} duplicate image URL(s) already in use.`);
+    }
+
+    if (uniqueLinks.length > 0) {
+      setEditImages((prev) => [...prev, ...uniqueLinks]);
       setEditDriveInput('');
-      triggerNotification(`Added ${convertedLinks.length} image link(s).`);
+      triggerNotification(`Added ${uniqueLinks.length} new image link(s).`);
+    } else if (duplicates.length > 0) {
+      setEditDriveInput('');
     }
   };
 
@@ -1470,29 +1541,50 @@ export default function AdminPanel({
                   {/* Mode 2: Google Drive / Web Link */}
                   {imageSourceMode === 'drive' && (
                     <div className="space-y-1.5">
-                      <div className="flex space-x-2">
-                        <input
-                          type="url"
-                          value={driveLinkInput}
-                          onChange={(e) => setDriveLinkInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleAddDriveUrl();
-                            }
-                          }}
-                          placeholder="Paste Google Drive link or image URL..."
-                          className="flex-1 bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddDriveUrl}
-                          className="px-3.5 py-2 bg-[#111111] hover:bg-[#222222] text-white font-mono text-xs font-bold flex items-center space-x-1.5 cursor-pointer shrink-0"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          <span>Add Image</span>
-                        </button>
-                      </div>
+                      {(() => {
+                        const duplicateWarning = getDuplicateImageWarning(driveLinkInput, formImages);
+                        return (
+                          <>
+                            <div className="flex space-x-2">
+                              <input
+                                type="url"
+                                value={driveLinkInput}
+                                onChange={(e) => setDriveLinkInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleAddDriveUrl();
+                                  }
+                                }}
+                                placeholder="Paste Google Drive link or image URL..."
+                                className={`flex-1 bg-white border px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden ${
+                                  duplicateWarning
+                                    ? 'border-amber-500 bg-amber-50/20 text-amber-950 focus:border-amber-600 ring-1 ring-amber-500/30'
+                                    : 'border-[#E5E5E5] focus:border-[#111111]'
+                                }`}
+                              />
+                              <button
+                                type="button"
+                                onClick={handleAddDriveUrl}
+                                className="px-3.5 py-2 bg-[#111111] hover:bg-[#222222] text-white font-mono text-xs font-bold flex items-center space-x-1.5 cursor-pointer shrink-0"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                                <span>Add Image</span>
+                              </button>
+                            </div>
+
+                            {duplicateWarning && (
+                              <div className="flex items-start space-x-2 p-2 bg-amber-50 border border-amber-300 text-amber-950 font-sans text-xs font-semibold rounded-xs">
+                                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="font-bold">⚠️ Duplicate Image URL Detected</p>
+                                  <p className="font-normal text-[11px] text-amber-800 mt-0.5">{duplicateWarning}</p>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                       <p className="font-mono text-[10px] text-neutral-500 bg-neutral-50 p-2 border border-neutral-200 leading-tight flex items-center justify-between">
                         <span>💡 Paste Google Drive share links (set to "Anyone with the link"). You can add multiple links!</span>
                         <a
@@ -1811,10 +1903,9 @@ export default function AdminPanel({
             </header>
 
             {/* Content Container */}
-            <div className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-              <div className="bg-white border border-[#E5E5E5] p-6 sm:p-8 space-y-6 shadow-xs">
-                
-                {/* Header info */}
+            <div className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8 bg-white space-y-6">
+              
+              {/* Header info */}
                 <div className="border-b border-[#E5E5E5] pb-4">
                   <h2 className="font-display font-bold text-xl text-[#111111]">
                     {editingLaptop.name}
@@ -2059,28 +2150,49 @@ export default function AdminPanel({
                       <span className="font-mono text-[10px] text-neutral-600 font-bold uppercase">
                         Or Add Google Drive Share Links
                       </span>
-                      <div className="flex space-x-1.5">
-                        <input
-                          type="url"
-                          value={editDriveInput}
-                          onChange={(e) => setEditDriveInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleAddEditDriveUrl();
-                            }
-                          }}
-                          placeholder="Paste Google Drive link..."
-                          className="flex-1 bg-white border border-[#E5E5E5] px-2.5 py-1.5 font-sans text-xs text-[#111111]"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddEditDriveUrl}
-                          className="px-3 py-1.5 bg-[#111111] hover:bg-[#222222] text-white font-mono text-xs font-bold shrink-0 cursor-pointer"
-                        >
-                          Add
-                        </button>
-                      </div>
+                      {(() => {
+                        const editDuplicateWarning = getDuplicateImageWarning(editDriveInput, editImages, editingLaptop?.id);
+                        return (
+                          <>
+                            <div className="flex space-x-1.5">
+                              <input
+                                type="url"
+                                value={editDriveInput}
+                                onChange={(e) => setEditDriveInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleAddEditDriveUrl();
+                                  }
+                                }}
+                                placeholder="Paste Google Drive link..."
+                                className={`flex-1 bg-white border px-2.5 py-1.5 font-sans text-xs text-[#111111] ${
+                                  editDuplicateWarning
+                                    ? 'border-amber-500 bg-amber-50/20 text-amber-950 focus:border-amber-600 ring-1 ring-amber-500/30'
+                                    : 'border-[#E5E5E5]'
+                                }`}
+                              />
+                              <button
+                                type="button"
+                                onClick={handleAddEditDriveUrl}
+                                className="px-3 py-1.5 bg-[#111111] hover:bg-[#222222] text-white font-mono text-xs font-bold shrink-0 cursor-pointer"
+                              >
+                                Add
+                              </button>
+                            </div>
+
+                            {editDuplicateWarning && (
+                              <div className="flex items-start space-x-2 p-2 bg-amber-50 border border-amber-300 text-amber-950 font-sans text-xs font-semibold rounded-xs">
+                                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="font-bold">⚠️ Duplicate Image URL Detected</p>
+                                  <p className="font-normal text-[11px] text-amber-800 mt-0.5">{editDuplicateWarning}</p>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
 
@@ -2161,7 +2273,6 @@ export default function AdminPanel({
               </form>
             </div>
           </div>
-        </div>
       )}
 
       </main>

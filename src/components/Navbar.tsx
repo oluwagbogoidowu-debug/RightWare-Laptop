@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Menu, X, MapPin, Clock, Laptop, Home, ShoppingBag, 
   Briefcase, DollarSign, Cpu, ChevronDown, ChevronRight, 
@@ -12,6 +13,7 @@ interface NavbarProps {
   onTabChange?: (tab: 'home' | 'shop') => void;
   onNavigateToShopBy?: (page: number) => void;
   onSelectCategoryFilter?: (type: 'budget' | 'brand' | 'use', value: any) => void;
+  onMenuToggle?: (isOpen: boolean) => void;
 }
 
 export default function Navbar({ 
@@ -19,22 +21,42 @@ export default function Navbar({
   availableCount, 
   onTabChange,
   onNavigateToShopBy,
-  onSelectCategoryFilter 
+  onSelectCategoryFilter,
+  onMenuToggle
 }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const toggleMenu = (open: boolean) => {
+    setMenuOpen(open);
+    if (onMenuToggle) {
+      onMenuToggle(open);
+    }
+  };
+
+  // Lock body scroll when side navbar is active
+  React.useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [menuOpen]);
 
   // Collapsible sub-section state inside drawer
   const [openShopSubsections, setOpenShopSubsections] = useState(true);
   const [openHomeSubsections, setOpenHomeSubsections] = useState(true);
 
   const handleHomeClick = () => {
-    setMenuOpen(false);
+    toggleMenu(false);
     if (onTabChange) onTabChange('home');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCatalogClick = () => {
-    setMenuOpen(false);
+    toggleMenu(false);
     if (onTabChange) onTabChange('shop');
     setTimeout(() => {
       onScrollToLaptops();
@@ -42,7 +64,7 @@ export default function Navbar({
   };
 
   const handleShopBySubsectionClick = (page: number) => {
-    setMenuOpen(false);
+    toggleMenu(false);
     if (onNavigateToShopBy) {
       onNavigateToShopBy(page);
     } else {
@@ -55,7 +77,7 @@ export default function Navbar({
   };
 
   const handleFilterClick = (type: 'budget' | 'brand' | 'use', value: any) => {
-    setMenuOpen(false);
+    toggleMenu(false);
     if (onSelectCategoryFilter) {
       onSelectCategoryFilter(type, value);
     } else {
@@ -67,7 +89,7 @@ export default function Navbar({
   };
 
   const handleAnchorClick = (tab: 'home' | 'shop', id: string) => {
-    setMenuOpen(false);
+    toggleMenu(false);
     if (onTabChange) onTabChange(tab);
     setTimeout(() => {
       const element = document.getElementById(id);
@@ -99,7 +121,7 @@ export default function Navbar({
         {/* Interactive Menu Icon on the Right Hand Side */}
         <button 
           id="menu-toggle-btn"
-          onClick={() => setMenuOpen(true)}
+          onClick={() => toggleMenu(true)}
           className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-[#111111] hover:text-[#FF3B30] hover:bg-neutral-100/50 active:bg-neutral-100 transition-all cursor-pointer rounded-sm border border-transparent hover:border-[#E5E5E5]"
           aria-label="Open Navigation Menu"
         >
@@ -107,50 +129,51 @@ export default function Navbar({
         </button>
       </div>
 
-      {/* Slide-out Menu Drawer */}
-      <AnimatePresence>
-        {menuOpen && (
-          <>
-            {/* Backdrop Overlay */}
-            <motion.div
-              id="menu-backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setMenuOpen(false)}
-              className="fixed inset-0 z-50 bg-[#111111]/40 backdrop-blur-xs"
-            />
+      {/* Slide-out Menu Drawer Portaled to document.body */}
+      {createPortal(
+        <AnimatePresence>
+          {menuOpen && (
+            <>
+              {/* Dark Backdrop Overlay that blocks background interaction */}
+              <motion.div
+                id="menu-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                onClick={() => toggleMenu(false)}
+                className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-sm"
+              />
 
-            {/* Full-screen Side Navigation Overlay */}
-            <motion.div
-              id="menu-sidebar"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-50 w-full h-full bg-white flex flex-col overflow-hidden"
-            >
-              {/* Header inside drawer */}
-              <div className="p-5 sm:px-8 border-b border-[#E5E5E5] flex items-center justify-between bg-white max-w-5xl w-full mx-auto">
-                <div className="flex items-center gap-2.5">
-                  <Laptop className="h-6 w-6 text-[#FF3B30] flex-shrink-0" />
-                  <span className="font-display text-xl font-extrabold tracking-tight text-[#111111]">
-                    Rightware
-                  </span>
+              {/* Side Navigation Overlay Drawer (Slides in from Right) */}
+              <motion.div
+                id="menu-sidebar"
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                className="fixed top-0 right-0 bottom-0 z-[10000] w-full sm:max-w-md md:max-w-lg h-full bg-white flex flex-col shadow-2xl overflow-hidden border-l border-[#E5E5E5]"
+              >
+                {/* Header inside drawer */}
+                <div className="p-5 sm:px-6 border-b border-[#E5E5E5] flex items-center justify-between bg-white w-full shrink-0">
+                  <div className="flex items-center gap-2.5">
+                    <Laptop className="h-6 w-6 text-[#FF3B30] flex-shrink-0" />
+                    <span className="font-display text-xl font-extrabold tracking-tight text-[#111111]">
+                      Rightware
+                    </span>
+                  </div>
+                  <button 
+                    id="menu-close-btn"
+                    onClick={() => toggleMenu(false)}
+                    className="w-10 h-10 flex items-center justify-center text-[#111111] hover:text-[#FF3B30] hover:bg-neutral-100 transition-all cursor-pointer rounded-sm border border-[#E5E5E5]"
+                    aria-label="Close Menu"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
                 </div>
-                <button 
-                  id="menu-close-btn"
-                  onClick={() => setMenuOpen(false)}
-                  className="w-10 h-10 flex items-center justify-center text-[#111111] hover:text-[#FF3B30] hover:bg-neutral-100 transition-all cursor-pointer rounded-sm border border-[#E5E5E5]"
-                  aria-label="Close Menu"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
 
               {/* Navigation Links List */}
-              <div className="flex-grow overflow-y-auto p-5 sm:p-8 max-w-5xl w-full mx-auto space-y-6">
+              <div className="flex-grow overflow-y-auto p-5 sm:p-6 w-full space-y-6">
 
                 {/* Primary Views */}
                 <div className="space-y-1">
@@ -380,8 +403,8 @@ export default function Navbar({
               </div>
 
               {/* Footer inside Drawer (Lagos Store & Shipping Details) */}
-              <div className="p-5 sm:px-8 bg-neutral-50 border-t border-[#E5E5E5] flex-shrink-0">
-                <div className="max-w-5xl w-full mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="p-4 sm:p-5 bg-neutral-50 border-t border-[#E5E5E5] flex-shrink-0">
+                <div className="w-full flex flex-col gap-3">
                   <div className="flex items-start space-x-2.5">
                     <div className="p-1 bg-white border border-[#E5E5E5] rounded-xs mt-0.5">
                       <MapPin className="h-3.5 w-3.5 text-[#FF3B30]" />
@@ -414,7 +437,9 @@ export default function Navbar({
             </motion.div>
           </>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+    )}
     </header>
   );
 }

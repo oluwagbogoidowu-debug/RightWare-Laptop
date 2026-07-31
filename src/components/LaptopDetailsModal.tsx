@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Laptop, LaptopCondition } from '../types';
-import { ArrowLeft, X, ShieldCheck, Battery, Cpu, HardDrive, Monitor, Check, Calendar } from 'lucide-react';
+import { ArrowLeft, X, ShieldCheck, Battery, Cpu, HardDrive, Monitor, Check, Calendar, Activity, Sparkles, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { createReservationInFirestore } from '../lib/firebaseService';
 import { formatNaira } from '../lib/utils';
@@ -12,7 +12,7 @@ interface LaptopDetailsModalProps {
 }
 
 export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsModalProps) {
-  const [activeTab, setActiveTab] = useState<'specs' | 'diagnostics'>('specs');
+  const [activeTab, setActiveTab] = useState<'specs' | 'condition' | 'diagnostics'>('specs');
   const [activeImage, setActiveImage] = useState<string>('');
   const [bookingForm, setBookingForm] = useState({ name: '', phone: '', location: 'Lagos' });
   const [bookingSuccess, setBookingSuccess] = useState(false);
@@ -109,11 +109,10 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
           </header>
 
           {/* Full Bleed Content Layout */}
-          <div className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-            <div className="bg-white border border-[#E5E5E5] flex flex-col md:flex-row shadow-sm">
-              
-              {/* Left Column: Images & Key Features */}
-              <div className="w-full md:w-1/2 bg-[#F7F7F7] p-6 sm:p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-[#E5E5E5]">
+          <div className="flex-1 max-w-6xl w-full mx-auto flex flex-col md:flex-row bg-white">
+            
+            {/* Left Column: Images & Key Features */}
+            <div className="w-full md:w-1/2 bg-[#F7F7F7] p-6 sm:p-8 md:p-10 flex flex-col justify-between border-b md:border-b-0 md:border-r border-[#E5E5E5]">
                 <div>
                   {/* Main Image Display */}
                   <div className="aspect-[4/3] w-full bg-white border border-[#E5E5E5] relative overflow-hidden">
@@ -199,32 +198,42 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
                   </p>
 
                   {/* Tab Switcher */}
-                  <div className="flex border-b border-[#E5E5E5] mt-6">
+                  <div className="flex border-b border-[#E5E5E5] mt-6 overflow-x-auto scrollbar-none">
                     <button
                       onClick={() => setActiveTab('specs')}
-                      className={`pb-2.5 font-sans font-semibold text-xs uppercase tracking-wider cursor-pointer ${
+                      className={`pb-2.5 font-sans font-semibold text-xs uppercase tracking-wider cursor-pointer whitespace-nowrap ${
                         activeTab === 'specs' 
                           ? 'border-b-2 border-[#111111] text-[#111111]' 
                           : 'text-[#6B6B6B] hover:text-[#111111]'
-                      } mr-6`}
+                      } mr-5`}
                     >
                       Specifications
                     </button>
                     <button
+                      onClick={() => setActiveTab('condition')}
+                      className={`pb-2.5 font-sans font-semibold text-xs uppercase tracking-wider cursor-pointer whitespace-nowrap ${
+                        activeTab === 'condition' 
+                          ? 'border-b-2 border-[#111111] text-[#111111]' 
+                          : 'text-[#6B6B6B] hover:text-[#111111]'
+                      } mr-5`}
+                    >
+                      Detailed Condition
+                    </button>
+                    <button
                       onClick={() => setActiveTab('diagnostics')}
-                      className={`pb-2.5 font-sans font-semibold text-xs uppercase tracking-wider cursor-pointer ${
+                      className={`pb-2.5 font-sans font-semibold text-xs uppercase tracking-wider cursor-pointer whitespace-nowrap ${
                         activeTab === 'diagnostics' 
                           ? 'border-b-2 border-[#111111] text-[#111111]' 
                           : 'text-[#6B6B6B] hover:text-[#111111]'
                       }`}
                     >
-                      Diagnostics Report
+                      Diagnostic Description
                     </button>
                   </div>
 
                   {/* Tab Content: Specs */}
-                  {activeTab === 'specs' ? (
-                    <div className="mt-4 space-y-2.5 text-xs">
+                  {activeTab === 'specs' && (
+                    <div className="mt-4 space-y-2.5 text-xs animate-fade-in">
                       <div className="flex justify-between items-center py-1.5 border-b border-dashed border-[#F0F0F0]">
                         <span className="text-[#6B6B6B] flex items-center space-x-2">
                           <Cpu className="h-3.5 w-3.5" />
@@ -261,18 +270,96 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
                         <span className="font-mono font-bold text-[#FF3B30] text-right">{laptop.batteryNote}</span>
                       </div>
                     </div>
-                  ) : (
-                    /* Tab Content: Diagnostics */
-                    <div className="mt-4 space-y-2 text-xs">
-                      {diagnosticsList.map((test, i) => (
-                        <div key={i} className="flex justify-between items-center py-1 bg-[#F7F7F7] px-2.5">
-                          <span className="font-sans text-[#111111]">{test.name}</span>
-                          <span className="font-mono text-[10px] text-emerald-600 font-bold flex items-center space-x-1">
-                            <Check className="h-3 w-3" />
-                            <span>Passed</span>
+                  )}
+
+                  {/* Tab Content: Detailed Condition */}
+                  {activeTab === 'condition' && (
+                    <div className="mt-4 space-y-3 text-xs animate-fade-in">
+                      {/* Cosmetic Grade Banner */}
+                      <div className="bg-[#F7F7F7] border border-[#E5E5E5] p-3 flex items-center justify-between">
+                        <div>
+                          <span className="font-mono text-[9px] text-[#6B6B6B] uppercase tracking-wider block">Cosmetic Quality Grade</span>
+                          <span className="font-display font-extrabold text-sm text-[#111111] mt-0.5 block">
+                            {laptop.condition === 'Very Clean' ? 'Grade A+ (Like-New Condition)' : laptop.condition === 'Clean' ? 'Grade A (Excellent Corporate Condition)' : 'Grade B (Good Standard Condition)'}
                           </span>
                         </div>
-                      ))}
+                        <span className={`text-[11px] font-mono px-2.5 py-1 border font-bold ${getConditionColor(laptop.condition)}`}>
+                          {laptop.condition}
+                        </span>
+                      </div>
+
+                      {/* Detailed Inspection Items */}
+                      <div className="space-y-2">
+                        <div className="p-2.5 bg-white border border-[#E5E5E5] flex items-start space-x-2.5">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold text-[#111111] block">Screen & Visual Clarity</span>
+                            <span className="text-[#6B6B6B] text-[11px]">100% spotless display panel. Free of dead pixels, pressure spots, backlight bleed, or keyboard impression marks.</span>
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 bg-white border border-[#E5E5E5] flex items-start space-x-2.5">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold text-[#111111] block">Chassis & Hinge Integrity</span>
+                            <span className="text-[#6B6B6B] text-[11px]">Original OEM casing. Smooth hinge motion with zero looseness or structural creaking.</span>
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 bg-white border border-[#E5E5E5] flex items-start space-x-2.5">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold text-[#111111] block">Keyboard & Trackpad Feedback</span>
+                            <span className="text-[#6B6B6B] text-[11px]">Every key tested for crisp tactile bounce. Trackpad multi-gesture click mechanism operates smoothly.</span>
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 bg-white border border-[#E5E5E5] flex items-start space-x-2.5">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold text-[#111111] block">Battery Retention</span>
+                            <span className="text-[#6B6B6B] text-[11px]">Battery tested at {laptop.batteryHealth || 85}% health capacity with original OEM charger included.</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tab Content: Diagnostics Description */}
+                  {activeTab === 'diagnostics' && (
+                    <div className="mt-4 space-y-3 text-xs animate-fade-in">
+                      {/* Hardware Benchmark Audit Bar */}
+                      <div className="bg-[#111111] text-white p-3 flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Activity className="h-4 w-4 text-[#FF3B30] animate-pulse" />
+                          <div>
+                            <span className="font-mono text-[10px] uppercase font-bold text-neutral-300 block">Hardware Audit & Thermal Stress</span>
+                            <span className="font-sans text-[11px] font-semibold text-emerald-400">All 8 Core Diagnostics Passed</span>
+                          </div>
+                        </div>
+                        <span className="font-mono text-[9px] bg-neutral-800 border border-neutral-700 px-2 py-0.5 text-neutral-300">
+                          S/N: {laptop.serialNumber}
+                        </span>
+                      </div>
+
+                      {/* Detailed Diagnostic List */}
+                      <div className="space-y-1.5">
+                        {diagnosticsList.map((test, i) => (
+                          <div key={i} className="flex justify-between items-center py-1.5 bg-[#F7F7F7] border border-[#E5E5E5] px-3">
+                            <span className="font-sans font-medium text-[#111111]">{test.name}</span>
+                            <span className="font-mono text-[10px] text-emerald-600 font-bold flex items-center space-x-1">
+                              <Check className="h-3 w-3" />
+                              <span>Passed</span>
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Engineer Signoff */}
+                      <div className="pt-2 flex items-center justify-between text-[10px] font-mono text-[#6B6B6B] border-t border-dashed border-[#E5E5E5]">
+                        <span>Senior Hardware Test Bench: OK</span>
+                        <span className="text-[#111111] font-bold">Lagos Workshop Certified</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -410,7 +497,6 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
                 </div>
               </div>
 
-            </div>
           </div>
         </motion.div>
       )}

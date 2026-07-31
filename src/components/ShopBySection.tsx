@@ -464,27 +464,26 @@ export default function ShopBySection({
               </AnimatePresence>
 
               {/* Swipe/Navigate Bottom Controls */}
-              <div className="mt-8 pt-4 border-t border-[#F0F0F0] flex items-center justify-between">
-                <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider">
-                  ← Swipe or Drag Left/Right to Switch →
+              <div className="mt-8 pt-4 border-t border-[#F0F0F0] flex items-center justify-between gap-3">
+                <button
+                  onClick={handlePrev}
+                  className="p-2 border border-[#E5E5E5] hover:border-[#111111] hover:bg-neutral-50 text-[#111111] transition-colors cursor-pointer rounded-xs shrink-0 flex items-center justify-center"
+                  aria-label="Previous Category"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                <span className="font-mono text-[9px] sm:text-[10px] text-neutral-500 font-semibold uppercase tracking-wider text-center flex-1">
+                  Swipe or Drag Left / Right to Switch
                 </span>
 
-                <div className="flex space-x-2">
-                  <button
-                    onClick={handlePrev}
-                    className="p-1.5 border border-[#E5E5E5] hover:border-[#111111] hover:bg-neutral-50 text-[#111111] transition-colors cursor-pointer"
-                    aria-label="Previous Category"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={handleNext}
-                    className="p-1.5 border border-[#E5E5E5] hover:border-[#111111] hover:bg-neutral-50 text-[#111111] transition-colors cursor-pointer"
-                    aria-label="Next Category"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
+                <button
+                  onClick={handleNext}
+                  className="p-2 border border-[#E5E5E5] hover:border-[#111111] hover:bg-neutral-50 text-[#111111] transition-colors cursor-pointer rounded-xs shrink-0 flex items-center justify-center"
+                  aria-label="Next Category"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </div>
 
             </div>

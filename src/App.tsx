@@ -3,7 +3,7 @@ import { Laptop, FilterState, FilterBudget, FilterBrand, FilterUse } from './typ
 import { ACTIVE_LAPTOPS, SOLD_LAPTOPS } from './data';
 import { seedInitialDataIfNeeded, subscribeLaptops } from './lib/firebaseService';
 import { ChevronRight, ArrowUpRight, Battery, Shield, CheckCircle2, MessageSquare, PhoneCall, Home, ShoppingBag } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 
 // Import our modular custom components
 import Navbar from './components/Navbar';
@@ -80,6 +80,9 @@ export default function App() {
 
   // Active selected laptop for modal detail inspection
   const [selectedLaptop, setSelectedLaptop] = useState<Laptop | null>(null);
+
+  // Active side navigation drawer state
+  const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
 
   // Active view tab: 'home' | 'shop'
   const [currentTab, setCurrentTab] = useState<'home' | 'shop'>('home');
@@ -256,6 +259,7 @@ export default function App() {
           setCurrentTab('shop');
           setTimeout(() => scrollToId('available-laptops'), 100);
         }}
+        onMenuToggle={setIsNavMenuOpen}
       />
 
       {/* Main Container */}
@@ -574,37 +578,47 @@ export default function App() {
         onClose={() => setSelectedLaptop(null)}
       />
 
-      {/* Floating Bottom Navigation Bar (Centered pill in viewport) */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#111111]/95 backdrop-blur-md border border-[#333] px-6 py-2.5 rounded-full shadow-[0_10px_35px_rgba(0,0,0,0.3)] flex items-center space-x-8">
-        <button
-          onClick={() => {
-            setCurrentTab('home');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          className={`flex flex-col items-center space-y-0.5 cursor-pointer transition-all duration-200 ${
-            currentTab === 'home' 
-              ? 'text-[#FF3B30] scale-105' 
-              : 'text-[#999999] hover:text-white'
-          }`}
-        >
-          <Home className="h-5 w-5" />
-          <span className="font-sans text-[10px] font-bold uppercase tracking-widest animate-fade-in">Home</span>
-        </button>
-        <button
-          onClick={() => {
-            setCurrentTab('shop');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          className={`flex flex-col items-center space-y-0.5 cursor-pointer transition-all duration-200 ${
-            currentTab === 'shop' 
-              ? 'text-[#FF3B30] scale-105' 
-              : 'text-[#999999] hover:text-white'
-          }`}
-        >
-          <ShoppingBag className="h-5 w-5" />
-          <span className="font-sans text-[10px] font-bold uppercase tracking-widest animate-fade-in">Shop</span>
-        </button>
-      </div>
+      {/* Floating Bottom Navigation Bar (Hidden when side nav or modal is open) */}
+      <AnimatePresence>
+        {!isNavMenuOpen && !selectedLaptop && (
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 30, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#111111]/95 backdrop-blur-md border border-[#333] px-6 py-2.5 rounded-full shadow-[0_10px_35px_rgba(0,0,0,0.3)] flex items-center space-x-8"
+          >
+            <button
+              onClick={() => {
+                setCurrentTab('home');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`flex flex-col items-center space-y-0.5 cursor-pointer transition-all duration-200 ${
+                currentTab === 'home' 
+                  ? 'text-[#FF3B30] scale-105' 
+                  : 'text-[#999999] hover:text-white'
+              }`}
+            >
+              <Home className="h-5 w-5" />
+              <span className="font-sans text-[10px] font-bold uppercase tracking-widest animate-fade-in">Home</span>
+            </button>
+            <button
+              onClick={() => {
+                setCurrentTab('shop');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`flex flex-col items-center space-y-0.5 cursor-pointer transition-all duration-200 ${
+                currentTab === 'shop' 
+                  ? 'text-[#FF3B30] scale-105' 
+                  : 'text-[#999999] hover:text-white'
+              }`}
+            >
+              <ShoppingBag className="h-5 w-5" />
+              <span className="font-sans text-[10px] font-bold uppercase tracking-widest animate-fade-in">Shop</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
