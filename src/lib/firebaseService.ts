@@ -92,6 +92,22 @@ export async function createReservationInFirestore(reservation: ReservationData)
   return docRef.id;
 }
 
+// Subscribe to Reservations in real time
+export function subscribeReservations(onData: (reservations: any[]) => void) {
+  const colRef = collection(db, 'reservations');
+  return onSnapshot(colRef, (snapshot) => {
+    const list: any[] = [];
+    snapshot.forEach((docSnap) => {
+      list.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    // Sort newest first if createdAt exists
+    list.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    onData(list);
+  }, (err) => {
+    console.error('Error subscribing to reservations:', err);
+  });
+}
+
 // Subscribe to Testimonials
 export function subscribeTestimonials(onData: (testimonials: Testimonial[]) => void) {
   const colRef = collection(db, 'testimonials');

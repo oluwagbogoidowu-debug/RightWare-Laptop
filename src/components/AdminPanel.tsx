@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CustomSelect, CustomMultiSelect } from './CustomSelect';
 import { Laptop, LaptopCondition, LaptopSpecs } from '../types';
-import { saveLaptopToFirestore, deleteLaptopFromFirestore } from '../lib/firebaseService';
+import { saveLaptopToFirestore, deleteLaptopFromFirestore, subscribeReservations } from '../lib/firebaseService';
 import { uploadToCloudinary } from '../lib/cloudinaryService';
 import { formatNaira, convertGoogleDriveUrl } from '../lib/utils';
 import { auth, googleProvider, ALLOWED_ADMIN_EMAILS } from '../firebase';
@@ -41,7 +41,10 @@ import {
   ExternalLink,
   Image as ImageIcon,
   Star,
-  Edit3
+  Edit3,
+  Calendar,
+  PhoneCall,
+  Clock
 } from 'lucide-react';
 
 export const GPU_OPTIONS = [
@@ -374,8 +377,16 @@ export default function AdminPanel({
     setAdminEmail('');
   };
 
-  // Tab state: 'inventory' | 'add' | 'sold'
-  const [activeTab, setActiveTab] = useState<'inventory' | 'add' | 'sold'>('inventory');
+  // Tab state: 'inventory' | 'add' | 'sold' | 'reservations'
+  const [activeTab, setActiveTab] = useState<'inventory' | 'add' | 'sold' | 'reservations'>('inventory');
+  const [reservations, setReservations] = useState<any[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeReservations((data) => {
+      setReservations(data);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // New Laptop Form State
   const [formName, setFormName] = useState('');
@@ -1168,6 +1179,20 @@ export default function AdminPanel({
               <span>Archive & Feedback ({soldLaptops.length})</span>
             </span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('reservations')}
+            className={`px-4 py-3 font-sans text-xs font-bold border-b-2 transition-all cursor-pointer ${
+              activeTab === 'reservations' 
+                ? 'border-[#FF3B30] text-[#111111]' 
+                : 'border-transparent text-[#6B6B6B] hover:text-[#111111]'
+            }`}
+          >
+            <span className="flex items-center space-x-2">
+              <Calendar className="h-4 w-4 text-[#FF3B30]" />
+              <span>24h Reservations ({reservations.length})</span>
+            </span>
+          </button>
         </div>
 
         {/* TAB 1: Inventory Table & Control */}
@@ -1863,6 +1888,81 @@ export default function AdminPanel({
               {soldLaptops.length === 0 && (
                 <div className="p-8 text-center text-[#6B6B6B] font-sans">
                   No sold archive found.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: Physical Inspection 24h Reservations */}
+        {activeTab === 'reservations' && (
+          <div className="bg-white border border-[#E5E5E5] shadow-xs">
+            <div className="p-4 bg-neutral-50 border-b border-[#E5E5E5] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div>
+                <h3 className="font-display font-extrabold text-sm text-[#111111] flex items-center space-x-2">
+                  <Calendar className="h-4 w-4 text-[#FF3B30]" />
+                  <span>Physical Inspection 24-Hour Hold Queue</span>
+                </h3>
+                <p className="font-sans text-xs text-[#6B6B6B] mt-0.5">
+                  Real-time client reservation inputs submitted from the storefront modal.
+                </p>
+              </div>
+              <span className="font-mono text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 border border-emerald-300">
+                ● LIVE SYNC ACTIVE ({reservations.length} BOOKINGS)
+              </span>
+            </div>
+
+            <div className="divide-y divide-[#E5E5E5]">
+              {reservations.map((res: any, idx: number) => (
+                <div key={res.id || idx} className="p-4 sm:p-5 hover:bg-neutral-50/70 transition-colors flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-mono text-[10px] bg-[#111111] text-white font-bold px-2 py-0.5 uppercase">
+                        {res.userLocation || 'Lagos'}
+                      </span>
+                      <h4 className="font-display font-bold text-sm text-[#111111]">
+                        {res.laptopName || 'Laptop Unit'}
+                      </h4>
+                      <span className="font-mono text-[10px] text-neutral-500 font-semibold">
+                        S/N: {res.serialNumber || 'N/A'}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#444444] font-sans pt-1">
+                      <div>
+                        <span className="text-neutral-400 font-mono text-[10px] uppercase block">Client Name</span>
+                        <strong className="text-[#111111]">{res.userName}</strong>
+                      </div>
+                      <div>
+                        <span className="text-neutral-400 font-mono text-[10px] uppercase block">Phone Line</span>
+                        <strong className="text-[#FF3B30] font-mono">{res.userPhone}</strong>
+                      </div>
+                      <div>
+                        <span className="text-neutral-400 font-mono text-[10px] uppercase block">Inspection Price</span>
+                        <strong className="text-emerald-700 font-mono">{res.price ? formatNaira(res.price) : 'N/A'}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2 self-end md:self-center">
+                    <a
+                      href={`tel:${res.userPhone}`}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-sans text-xs font-bold px-3.5 py-2 transition-colors flex items-center space-x-1.5 cursor-pointer shadow-2xs"
+                    >
+                      <PhoneCall className="h-3.5 w-3.5" />
+                      <span>Call Client</span>
+                    </a>
+                  </div>
+                </div>
+              ))}
+
+              {reservations.length === 0 && (
+                <div className="p-10 text-center text-[#6B6B6B] font-sans">
+                  <Clock className="h-8 w-8 text-neutral-300 mx-auto mb-2" />
+                  <p className="font-bold text-sm text-neutral-700">No active 24h reservations yet.</p>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    When buyers reserve laptops for 24-hour physical inspection, their details will appear here instantly.
+                  </p>
                 </div>
               )}
             </div>

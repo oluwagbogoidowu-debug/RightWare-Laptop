@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Laptop, LaptopCondition } from '../types';
-import { ArrowLeft, X, ShieldCheck, Battery, Cpu, HardDrive, Monitor, Check, Calendar, Activity, Sparkles, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, X, ShieldCheck, Battery, Cpu, HardDrive, Monitor, Check, Calendar, Activity, Sparkles, CheckCircle2, ShieldAlert, Clock, PhoneCall, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { createReservationInFirestore } from '../lib/firebaseService';
 import { formatNaira } from '../lib/utils';
@@ -192,10 +192,18 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
                     </span>
                   </div>
 
-                  {/* Long description */}
-                  <p className="font-sans text-xs text-[#6B6B6B] mt-4 leading-relaxed">
-                    {laptop.description}
-                  </p>
+                  {/* Detailed Condition & Diagnostic Description Paragraph */}
+                  {laptop.description ? (
+                    <div className="mt-4 p-3.5 bg-neutral-50/80 border border-[#E5E5E5] rounded-xs space-y-1.5">
+                      <h4 className="font-mono text-[10px] uppercase tracking-wider text-neutral-500 font-bold flex items-center space-x-1.5">
+                        <Sparkles className="h-3 w-3 text-[#FF3B30]" />
+                        <span>Detailed Condition & Diagnostic Description</span>
+                      </h4>
+                      <p className="font-sans text-xs text-[#333333] leading-relaxed whitespace-pre-line">
+                        {laptop.description}
+                      </p>
+                    </div>
+                  ) : null}
 
                   {/* Tab Switcher */}
                   <div className="flex border-b border-[#E5E5E5] mt-6 overflow-x-auto scrollbar-none">
@@ -290,6 +298,17 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
 
                       {/* Detailed Inspection Items */}
                       <div className="space-y-2">
+                        {laptop.description && (
+                          <div className="p-3 bg-neutral-50 border border-[#E5E5E5]">
+                            <span className="font-mono text-[9px] text-[#6B6B6B] uppercase font-bold block mb-1">
+                              Custom Inspector Notes & Summary
+                            </span>
+                            <p className="font-sans text-xs text-[#222222] leading-relaxed whitespace-pre-line">
+                              {laptop.description}
+                            </p>
+                          </div>
+                        )}
+
                         <div className="p-2.5 bg-white border border-[#E5E5E5] flex items-start space-x-2.5">
                           <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
                           <div>
@@ -343,6 +362,17 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
                       </div>
 
                       {/* Detailed Diagnostic List */}
+                      {laptop.description && (
+                        <div className="p-3 bg-neutral-50 border border-[#E5E5E5] space-y-1">
+                          <span className="font-mono text-[9px] text-neutral-500 uppercase font-bold block">
+                            Hardware & Thermal Benchmark Summary
+                          </span>
+                          <p className="font-sans text-xs text-[#222222] leading-relaxed whitespace-pre-line">
+                            {laptop.description}
+                          </p>
+                        </div>
+                      )}
+
                       <div className="space-y-1.5">
                         {diagnosticsList.map((test, i) => (
                           <div key={i} className="flex justify-between items-center py-1.5 bg-[#F7F7F7] border border-[#E5E5E5] px-3">
@@ -364,8 +394,12 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
                   )}
                 </div>
 
-                {/* Booking and Reservation Area or Sold Unit Showcase */}
-                <div className="mt-8 pt-6 border-t border-[#E5E5E5]">
+                {/* Booking and Reservation Area - Dedicated Action Card & Main Focus */}
+                <div className="mt-8 bg-white border-2 border-[#111111] p-5 sm:p-6 shadow-lg relative rounded-xs">
+                  <div className="absolute -top-3 left-4 bg-[#FF3B30] text-white font-mono text-[9px] font-bold uppercase px-3 py-0.5 tracking-widest shadow-xs">
+                    ★ PRIMARY ACTION POINT
+                  </div>
+                  
                   {laptop.isSold ? (
                     <div className="bg-neutral-50 border border-neutral-200 p-4">
                       <div className="flex items-center justify-between">
@@ -407,65 +441,143 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
                     </div>
                   ) : bookingSuccess ? (
                     <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="bg-emerald-50 border border-emerald-200 p-4 text-center"
+                      initial={{ opacity: 0, scale: 0.96 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="w-full bg-[#0D1F17] text-white border-2 border-emerald-500 p-6 sm:p-7 shadow-2xl relative rounded-xs overflow-hidden"
                     >
-                      <ShieldCheck className="h-7 w-7 text-emerald-600 mx-auto" />
-                      <h4 className="font-display font-bold text-sm text-emerald-800 mt-2">
-                        Device Reserved Successfully!
-                      </h4>
-                      <p className="font-sans text-xs text-emerald-700 mt-1 leading-relaxed">
-                        We have locked <strong className="text-emerald-950 font-bold">{laptop.name} (S/N: {laptop.serialNumber})</strong> under your name for the next <strong className="font-bold">24 Hours</strong>.
-                      </p>
-                      <p className="font-mono text-[10px] text-emerald-600 mt-3 font-semibold">
-                        Our sales rep will reach you at {bookingForm.phone} shortly.
+                      {/* Full Bleed Top Accent Badge */}
+                      <div className="bg-emerald-500 text-[#0D1F17] font-mono text-[10px] font-black uppercase tracking-widest px-4 py-1.5 flex items-center justify-between -mx-6 -mt-6 sm:-mx-7 sm:-mt-7 mb-6 shadow-md">
+                        <span className="flex items-center space-x-1.5">
+                          <CheckCircle2 className="h-4 w-4 text-[#0D1F17]" />
+                          <span>PHYSICAL INSPECTION HOLD CONFIRMED</span>
+                        </span>
+                        <span className="bg-[#0D1F17] text-emerald-400 text-[9px] px-2 py-0.5 rounded-full font-bold">
+                          24H LOCK ACTIVE
+                        </span>
+                      </div>
+
+                      {/* Main Icon & Title */}
+                      <div className="text-center space-y-3 py-2">
+                        <div className="relative inline-block">
+                          <div className="w-16 h-16 bg-emerald-500/10 border-2 border-emerald-500/40 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                            <ShieldCheck className="h-9 w-9 text-emerald-400" />
+                          </div>
+                          <span className="absolute -bottom-1 -right-1 bg-emerald-500 text-[#0D1F17] rounded-full p-1">
+                            <Check className="h-3.5 w-3.5 stroke-[3]" />
+                          </span>
+                        </div>
+
+                        <h3 className="font-display font-black text-xl text-white tracking-tight uppercase">
+                          Device Reserved Successfully!
+                        </h3>
+
+                        <p className="font-sans text-xs sm:text-sm text-emerald-100 leading-relaxed max-w-lg mx-auto bg-emerald-950/60 p-3.5 border border-emerald-800/80">
+                          We have locked <strong className="text-emerald-300 font-bold underline decoration-emerald-500 decoration-2">{laptop.name} (S/N: {laptop.serialNumber})</strong> under your name (<strong className="text-white font-bold">{bookingForm.name}</strong>) for the next <strong className="text-amber-300 font-bold">24 Hours</strong>.
+                        </p>
+                      </div>
+
+                      {/* Ticket Summary Box */}
+                      <div className="mt-5 bg-[#091510] border border-emerald-800/70 p-4 space-y-2.5 font-mono text-xs">
+                        <div className="flex justify-between items-center pb-2 border-b border-emerald-900/80">
+                          <span className="text-emerald-400 text-[10px] uppercase font-bold flex items-center gap-1.5">
+                            <Send className="h-3 w-3 text-emerald-400 animate-pulse" />
+                            <span>Input Synced To Admin</span>
+                          </span>
+                          <span className="text-emerald-300 text-[10px] font-bold">LIVE QUEUE</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          <div>
+                            <span className="text-emerald-600 block text-[9px] uppercase">Reserved By</span>
+                            <span className="text-white font-bold truncate block">{bookingForm.name}</span>
+                          </div>
+                          <div>
+                            <span className="text-emerald-600 block text-[9px] uppercase">Phone Line</span>
+                            <span className="text-emerald-300 font-bold block">{bookingForm.phone}</span>
+                          </div>
+                          <div>
+                            <span className="text-emerald-600 block text-[9px] uppercase">Pickup / Delivery</span>
+                            <span className="text-white font-semibold block">{bookingForm.location}</span>
+                          </div>
+                          <div>
+                            <span className="text-emerald-600 block text-[9px] uppercase">Inspection Price</span>
+                            <span className="text-emerald-400 font-extrabold block">{formatNaira(laptop.price)}</span>
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-emerald-900/80 flex items-center justify-between text-[10px] text-emerald-300">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3 text-amber-400" />
+                            <span>24-Hour Hold Guarantee: No Advance Deposit Required</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                        <button
+                          onClick={onClose}
+                          className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-[#0D1F17] font-sans font-extrabold text-xs py-3 px-4 transition-all cursor-pointer text-center uppercase tracking-wider shadow-md"
+                        >
+                          Close & Explore Catalog
+                        </button>
+                        <button
+                          onClick={() => setBookingSuccess(false)}
+                          className="bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 font-sans font-bold text-xs py-3 px-4 border border-emerald-700 transition-colors cursor-pointer text-center"
+                        >
+                          Modify Details
+                        </button>
+                      </div>
+
+                      <p className="font-mono text-[9px] text-emerald-400/80 mt-3 text-center">
+                        ★ Rightware Sales Rep will call {bookingForm.phone} within 15 mins to confirm physical inspection timing.
                       </p>
                     </motion.div>
                   ) : (
                     <div>
-                      <div className="flex justify-between items-baseline mb-3">
-                        <h4 className="font-display font-bold text-xs uppercase tracking-wider text-[#111111]">
-                          Reserve for 24h Physical Inspection
+                      <div className="flex justify-between items-center mb-4 pb-2.5 border-b border-[#E5E5E5]">
+                        <h4 className="font-display font-extrabold text-sm uppercase tracking-wider text-[#111111] flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-[#FF3B30]" />
+                          <span>Reserve for 24h Physical Inspection</span>
                         </h4>
                         {laptop.stockCount <= 2 && (
-                          <span className="font-mono text-[10px] text-[#FF3B30] font-bold animate-pulse">
-                            ⚠️ Only {laptop.stockCount} left in stock
+                          <span className="font-mono text-[10px] text-[#FF3B30] font-bold animate-pulse bg-red-50 px-2 py-0.5 border border-red-200">
+                            ⚠️ Only {laptop.stockCount} unit left
                           </span>
                         )}
                       </div>
                       
-                      <form onSubmit={handleBook} className="space-y-2.5">
-                        <div className="grid grid-cols-2 gap-2">
+                      <form onSubmit={handleBook} className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="relative">
-                            <span className="absolute left-2.5 top-2.5 text-neutral-400 font-sans text-[11px] leading-none pointer-events-none">Name</span>
+                            <span className="absolute left-3 top-2.5 text-neutral-400 font-sans text-[11px] leading-none pointer-events-none">Name</span>
                             <input
                               type="text"
                               required
                               placeholder="e.g. Samuel"
                               value={bookingForm.name}
                               onChange={(e) => setBookingForm({ ...bookingForm, name: e.target.value })}
-                              className="w-full bg-[#F7F7F7] border border-[#E5E5E5] pl-11 pr-2.5 py-2 font-sans text-xs focus:outline-hidden focus:border-[#111111]"
+                              className="w-full bg-[#F7F7F7] border border-[#E5E5E5] pl-14 pr-3 py-2.5 font-sans text-xs focus:outline-hidden focus:border-[#111111] focus:bg-white transition-colors"
                             />
                           </div>
                           <div className="relative">
-                            <span className="absolute left-2.5 top-2.5 text-neutral-400 font-sans text-[11px] leading-none pointer-events-none">Phone</span>
+                            <span className="absolute left-3 top-2.5 text-neutral-400 font-sans text-[11px] leading-none pointer-events-none">Phone</span>
                             <input
                               type="text"
                               required
                               placeholder="081..."
                               value={bookingForm.phone}
                               onChange={(e) => setBookingForm({ ...bookingForm, phone: e.target.value })}
-                              className="w-full bg-[#F7F7F7] border border-[#E5E5E5] pl-11 pr-2.5 py-2 font-mono text-xs focus:outline-hidden focus:border-[#111111]"
+                              className="w-full bg-[#F7F7F7] border border-[#E5E5E5] pl-14 pr-3 py-2.5 font-mono text-xs focus:outline-hidden focus:border-[#111111] focus:bg-white transition-colors"
                             />
                           </div>
                         </div>
 
-                        <div className="flex space-x-2">
+                        <div className="flex flex-col sm:flex-row gap-3">
                           <select
                             value={bookingForm.location}
                             onChange={(e) => setBookingForm({ ...bookingForm, location: e.target.value })}
-                            className="bg-[#F7F7F7] border border-[#E5E5E5] px-2.5 py-2.5 font-sans text-xs focus:outline-hidden focus:border-[#111111] w-1/3"
+                            className="bg-[#F7F7F7] border border-[#E5E5E5] px-3 py-2.5 font-sans text-xs focus:outline-hidden focus:border-[#111111] focus:bg-white transition-colors w-full sm:w-1/3 cursor-pointer"
                           >
                             <option value="Lagos">Lagos (Store/Delivery)</option>
                             <option value="Abuja">Abuja (Shipping)</option>
@@ -476,7 +588,7 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
                           <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="bg-[#FF3B30] hover:bg-[#FF3B30]/90 text-white font-sans text-xs font-semibold px-4 py-2.5 transition-colors cursor-pointer w-2/3 flex items-center justify-center space-x-2"
+                            className="bg-[#FF3B30] hover:bg-[#111111] text-white font-sans text-xs font-bold px-5 py-3 transition-all cursor-pointer w-full sm:w-2/3 flex items-center justify-center space-x-2 shadow-sm"
                           >
                             {isSubmitting ? (
                               <span>Reserving Unit...</span>
@@ -489,8 +601,8 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
                           </button>
                         </div>
                       </form>
-                      <p className="font-mono text-[9px] text-[#6B6B6B] mt-2 text-center">
-                        No commitment required. Inspect thoroughly in-store or upon home delivery before payment.
+                      <p className="font-mono text-[9px] text-[#6B6B6B] mt-3 text-center">
+                        No financial commitment required. Inspect thoroughly in-store or upon delivery before payment.
                       </p>
                     </div>
                   )}
