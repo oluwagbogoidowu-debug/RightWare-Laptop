@@ -1,8 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Laptop } from '../types';
 import SmartImage from './SmartImage';
 import { ChevronLeft, ChevronRight, Images } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 
 interface LaptopCardImageSliderProps {
   laptop: Laptop;
@@ -19,13 +18,24 @@ export default function LaptopCardImageSlider({
   children,
   onCardClick
 }: LaptopCardImageSliderProps) {
-  // Collect all unique non-empty image URLs
+  // Collect all unique non-empty image URLs for the laptop
   const images = Array.from(
     new Set([laptop.image, ...(laptop.additionalImages || [])])
   ).filter(Boolean);
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState<'left' | 'right'>('left');
+
+  // Eagerly preload all images in the collection locally on component mount
+  useEffect(() => {
+    if (images.length > 1) {
+      images.forEach((src) => {
+        if (src) {
+          const img = new Image();
+          img.src = src;
+        }
+      });
+    }
+  }, [images.join(',')]);
 
   // Touch & Drag Handling
   const touchStartX = useRef<number | null>(null);
@@ -33,19 +43,16 @@ export default function LaptopCardImageSlider({
   const isDragging = useRef(false);
 
   const totalImages = images.length;
-  const currentImage = images[currentIndex] || laptop.image;
 
   const nextSlide = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (totalImages <= 1) return;
-    setDirection('left');
     setCurrentIndex((prev) => (prev + 1) % totalImages);
   };
 
   const prevSlide = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (totalImages <= 1) return;
-    setDirection('right');
     setCurrentIndex((prev) => (prev - 1 + totalImages) % totalImages);
   };
 
@@ -67,10 +74,9 @@ export default function LaptopCardImageSlider({
     }
 
     const distance = touchStartX.current - touchEndX.current;
-    const minSwipeDistance = 35; // px
+    const minSwipeDistance = 30; // px
 
     if (Math.abs(distance) > minSwipeDistance) {
-      // Prevent parent click if it was a swipe
       e.stopPropagation();
       if (distance > 0) {
         // Swiped Left -> reveal next image
@@ -98,23 +104,30 @@ export default function LaptopCardImageSlider({
         }
       }}
     >
-      {/* Animated Image Slider container */}
-      <AnimatePresence initial={false} mode="wait">
-        <motion.div
-          key={currentIndex}
-          initial={{ opacity: 0.8, x: direction === 'left' ? 40 : -40 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0.8, x: direction === 'left' ? -40 : 40 }}
-          transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="w-full h-full"
-        >
-          <SmartImage
-            src={currentImage}
-            alt={`${laptop.name} view ${currentIndex + 1}`}
-            className={`w-full h-full object-cover transition-transform duration-500 ease-out filter grayscale-[0.05] ${imageClassName}`}
-          />
-        </motion.div>
-      </AnimatePresence>
+      {/* Stacked Image Slider Container - Pre-renders all collection images so sliding is instant with zero network reload delay */}
+      <div className="relative w-full h-full overflow-hidden">
+        {images.map((imgSrc, idx) => {
+          const offset = idx - currentIndex;
+          return (
+            <div
+              key={imgSrc + idx}
+              aria-hidden={idx !== currentIndex}
+              className="absolute inset-0 w-full h-full transition-transform duration-300 ease-out will-change-transform"
+              style={{
+                transform: `translateX(${offset * 100}%)`,
+              }}
+            >
+              <SmartImage
+                src={imgSrc}
+                alt={`${laptop.name} photo ${idx + 1}`}
+                loading="eager"
+                decoding="async"
+                className={`w-full h-full object-cover filter grayscale-[0.05] ${imageClassName}`}
+              />
+            </div>
+          );
+        })}
+      </div>
 
       {/* Slide Navigation Chevron Buttons (Visible on hover when multiple images exist) */}
       {totalImages > 1 && (
@@ -151,7 +164,6 @@ export default function LaptopCardImageSlider({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setDirection(idx > currentIndex ? 'left' : 'right');
                   setCurrentIndex(idx);
                 }}
                 className={`h-1.5 rounded-full transition-all cursor-pointer ${
