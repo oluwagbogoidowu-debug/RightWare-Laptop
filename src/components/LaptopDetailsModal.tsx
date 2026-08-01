@@ -114,8 +114,8 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
             {/* Left Column: Images & Key Features */}
             <div className="w-full md:w-1/2 bg-[#F7F7F7] p-6 sm:p-8 md:p-10 flex flex-col justify-between border-b md:border-b-0 md:border-r border-[#E5E5E5]">
                 <div>
-                  {/* Main Image Display */}
-                  <div className="aspect-[4/3] w-full bg-white border border-[#E5E5E5] relative overflow-hidden">
+                  {/* Main Image Display (4:5 Portrait) */}
+                  <div className="aspect-[4/5] w-full bg-white border border-[#E5E5E5] relative overflow-hidden">
                     <SmartImage
                       src={activeImage || laptop.image}
                       alt={laptop.name}
@@ -135,7 +135,7 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
                         <button
                           key={i}
                           onClick={() => setActiveImage(img)}
-                          className={`aspect-[4/3] border overflow-hidden cursor-pointer bg-white transition-all ${
+                          className={`aspect-[4/5] border overflow-hidden cursor-pointer bg-white transition-all ${
                             activeImage === img ? 'border-[#FF3B30] ring-1 ring-[#FF3B30]' : 'border-[#E5E5E5] hover:border-neutral-500'
                           }`}
                         >
@@ -191,19 +191,6 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
                       Save {formatNaira((laptop.originalPrice || (laptop.price < 10000 ? (laptop.price + 300) * 1000 : laptop.price + 300000)) - (laptop.price < 10000 ? laptop.price * 1000 : laptop.price))}
                     </span>
                   </div>
-
-                  {/* Detailed Condition & Diagnostic Description Paragraph */}
-                  {laptop.description ? (
-                    <div className="mt-4 p-3.5 bg-neutral-50/80 border border-[#E5E5E5] rounded-xs space-y-1.5">
-                      <h4 className="font-mono text-[10px] uppercase tracking-wider text-neutral-500 font-bold flex items-center space-x-1.5">
-                        <Sparkles className="h-3 w-3 text-[#FF3B30]" />
-                        <span>Detailed Condition & Diagnostic Description</span>
-                      </h4>
-                      <p className="font-sans text-xs text-[#333333] leading-relaxed whitespace-pre-line">
-                        {laptop.description}
-                      </p>
-                    </div>
-                  ) : null}
 
                   {/* Tab Switcher */}
                   <div className="flex border-b border-[#E5E5E5] mt-6 overflow-x-auto scrollbar-none">
