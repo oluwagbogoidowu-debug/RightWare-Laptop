@@ -711,17 +711,19 @@ export default function AdminPanel({
   // Add a new laptop listing
   const handleAddLaptop = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formName || !formCpu || !formSerial) {
-      triggerNotification('Please fill in Model Name, CPU, and Serial Number!');
+    if (!formName || !formCpu) {
+      triggerNotification('Please fill in Model Name and CPU Processor!');
       return;
     }
 
     setIsSubmitting(true);
     triggerNotification('Uploading & optimizing images via Cloudinary...');
 
+    const generatedSerial = formSerial.trim() || `RW-${(formBrand || 'UNIT').substring(0, 3).toUpperCase()}-${Math.floor(100000 + Math.random() * 900000)}`;
+
     // Process all images to ensure Cloudinary CDN URLs
     const processedFormImages: string[] = [];
-    const prefix = formSerial.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const prefix = generatedSerial.replace(/[^a-zA-Z0-9_-]/g, '_');
 
     for (let i = 0; i < formImages.length; i++) {
       const img = formImages[i];
@@ -776,7 +778,7 @@ export default function AdminPanel({
       stockCount: Number(formStock),
       useCategory: formCategory,
       description: formDescription || `Tested and verified ${formCondition} condition ${formName}. Fully ready for productivity.`,
-      serialNumber: formSerial,
+      serialNumber: generatedSerial,
       inspectionPassed: formInspection,
       isForSale: formForSale
     };
@@ -1482,20 +1484,6 @@ export default function AdminPanel({
                 </div>
 
                 <div>
-                  <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
-                    Serial Number *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formSerial}
-                    onChange={(e) => setFormSerial(e.target.value)}
-                    placeholder="e.g. C02G298MQ05D"
-                    className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
-                  />
-                </div>
-
-                <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block font-sans text-xs font-bold text-neutral-700">
                       Laptop Images ({formImages.length})
@@ -2102,19 +2090,6 @@ export default function AdminPanel({
                       min={0}
                       value={editForm.stockCount ?? 1}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, stockCount: Number(e.target.value) }))}
-                      className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-sans text-xs font-bold text-neutral-700 mb-1">
-                      Serial Number (S/N) *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={editForm.serialNumber || ''}
-                      onChange={(e) => setEditForm((prev) => ({ ...prev, serialNumber: e.target.value }))}
                       className="w-full bg-white border border-[#E5E5E5] px-3 py-2 font-sans text-xs text-[#111111] focus:outline-hidden focus:border-[#111111]"
                     />
                   </div>

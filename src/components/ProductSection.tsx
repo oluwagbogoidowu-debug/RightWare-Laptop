@@ -3,7 +3,7 @@ import { Laptop, FilterState, LaptopCondition } from '../types';
 import { Search, RotateCcw, AlertTriangle, ShieldCheck, Tag, ChevronDown, Check } from 'lucide-react';
 import { formatNaira } from '../lib/utils';
 import { BRAND_OPTIONS, USE_CASE_OPTIONS } from './AdminPanel';
-import SmartImage from './SmartImage';
+import LaptopCardImageSlider from './LaptopCardImageSlider';
 
 interface ProductSectionProps {
   laptops: Laptop[];
@@ -196,19 +196,15 @@ export default function ProductSection({
                 }`}
               >
                 <div>
-                  {/* Laptop Visual Card Container */}
-                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#F7F7F7] border border-[#E5E5E5]">
-                    <SmartImage
-                      src={laptop.image}
-                      alt={laptop.name}
-                      className={`w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out filter grayscale-[0.1] ${
-                        laptop.isSold ? 'brightness-75 contrast-75' : ''
-                      }`}
-                    />
-
+                  {/* Laptop Visual Card Container with Interactive Image Slider */}
+                  <LaptopCardImageSlider
+                    laptop={laptop}
+                    imageClassName={laptop.isSold ? 'brightness-75 contrast-75' : ''}
+                    onCardClick={() => onSelectLaptop(laptop)}
+                  >
                     {/* Highly Controlled Red Urgency Tag (Low Stock) - only when NOT sold */}
                     {!laptop.isSold && laptop.stockCount <= 2 && (
-                      <div className="absolute top-2 left-2 bg-[#FF3B30] text-white text-[9px] font-mono font-bold tracking-wider px-2 py-0.5 flex items-center space-x-1 shadow-sm">
+                      <div className="absolute top-2 left-2 z-10 bg-[#FF3B30] text-white text-[9px] font-mono font-bold tracking-wider px-2 py-0.5 flex items-center space-x-1 shadow-sm">
                         <Tag className="h-2.5 w-2.5 fill-white" />
                         <span>{laptop.stockCount === 1 ? 'ONLY 1 LEFT' : '2 UNITS LEFT'}</span>
                       </div>
@@ -216,7 +212,7 @@ export default function ProductSection({
 
                     {/* Bold "SOLD OUT" badge overlay */}
                     {laptop.isSold && (
-                      <div className="absolute inset-0 bg-[#111111]/40 backdrop-blur-[0.5px] flex items-center justify-center z-10">
+                      <div className="absolute inset-0 bg-[#111111]/40 backdrop-blur-[0.5px] flex items-center justify-center z-10 pointer-events-none">
                         <span className="bg-[#FF3B30] text-white text-[10px] sm:text-xs font-mono font-black tracking-widest px-3.5 py-1.5 shadow-md">
                           SOLD OUT
                         </span>
@@ -230,7 +226,7 @@ export default function ProductSection({
                         <span>VERIFIED</span>
                       </div>
                     )}
-                  </div>
+                  </LaptopCardImageSlider>
 
                   {/* Identification and conditions */}
                   <div className="mt-3 flex justify-between items-start gap-1">

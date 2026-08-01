@@ -2,7 +2,7 @@ import React from 'react';
 import { Laptop } from '../types';
 import { formatNaira } from '../lib/utils';
 import { ShieldCheck, Tag, Battery, ChevronRight, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
-import SmartImage from './SmartImage';
+import LaptopCardImageSlider from './LaptopCardImageSlider';
 
 interface TopLaptopsHomeProps {
   topLaptops: Laptop[];
@@ -74,28 +74,26 @@ export default function TopLaptopsHome({
                 </span>
               </div>
 
-              {/* Image Container */}
-              <div className="relative aspect-[16/10] w-full overflow-hidden bg-white border border-[#E5E5E5]">
-                <SmartImage
-                  src={laptop.image}
-                  alt={laptop.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 filter grayscale-[0.05]"
-                />
-
+              {/* Image Container with Interactive Image Slider */}
+              <LaptopCardImageSlider
+                laptop={laptop}
+                className="aspect-[4/5]"
+                onCardClick={() => onSelectLaptop(laptop)}
+              >
                 {!laptop.isSold && laptop.stockCount <= 2 && (
-                  <div className="absolute top-2 left-2 bg-[#FF3B30] text-white text-[9px] font-mono font-bold tracking-wider px-2 py-0.5 flex items-center space-x-1 shadow-sm">
+                  <div className="absolute top-2 left-2 z-10 bg-[#FF3B30] text-white text-[9px] font-mono font-bold tracking-wider px-2 py-0.5 flex items-center space-x-1 shadow-sm">
                     <Tag className="h-2.5 w-2.5 fill-white" />
                     <span>{laptop.stockCount === 1 ? 'ONLY 1 LEFT' : '2 UNITS LEFT'}</span>
                   </div>
                 )}
 
                 {laptop.inspectionPassed && (
-                  <div className="absolute bottom-2 right-2 bg-[#111111]/85 text-white text-[8px] font-mono tracking-widest px-1.5 py-0.5 flex items-center space-x-1">
+                  <div className="absolute bottom-2 right-2 z-10 bg-[#111111]/85 text-white text-[8px] font-mono tracking-widest px-1.5 py-0.5 flex items-center space-x-1">
                     <ShieldCheck className="h-3 w-3 text-emerald-400" />
                     <span>45-PT PASSED</span>
                   </div>
                 )}
-              </div>
+              </LaptopCardImageSlider>
 
               {/* Information */}
               <div className="mt-4 space-y-2">

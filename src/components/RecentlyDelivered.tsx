@@ -33,7 +33,7 @@ export default function RecentlyDelivered({ soldLaptops = SOLD_LAPTOPS }: Recent
             >
               {/* Product Visual Container with SOLD Overlay */}
               <div>
-                <div className="relative aspect-[4/3] w-full overflow-hidden bg-white border border-[#E5E5E5]">
+                <div className="relative aspect-[4/5] w-full overflow-hidden bg-white border border-[#E5E5E5]">
                   <SmartImage
                     src={laptop.image}
                     alt={laptop.name}
