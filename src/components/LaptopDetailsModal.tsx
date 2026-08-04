@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Laptop, LaptopCondition } from '../types';
-import { ArrowLeft, X, ShieldCheck, Battery, Cpu, HardDrive, Monitor, Check, Calendar, Activity, Sparkles, CheckCircle2, ShieldAlert, Clock, PhoneCall, Send } from 'lucide-react';
+import { ArrowLeft, X, ShieldCheck, Battery, Cpu, HardDrive, Monitor, Check, Calendar, CheckCircle2, ShieldAlert, Clock, PhoneCall, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { createReservationInFirestore } from '../lib/firebaseService';
 import { formatNaira } from '../lib/utils';
@@ -51,17 +51,6 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
       setBookingSuccess(true);
     }
   };
-
-  const diagnosticsList = [
-    { name: 'Motherboard & Capacitors', status: 'Passed' },
-    { name: 'Battery Integrity & Wear Ratio', status: 'Passed (80%+ Guaranteed)' },
-    { name: 'Screen Backlight & Bad Pixels', status: 'Passed (No spots/bruises)' },
-    { name: 'Keyboard Response (All keys)', status: 'Passed' },
-    { name: 'USB, USB-C & Charging Ports', status: 'Passed' },
-    { name: 'Wi-Fi, Bluetooth & Web Camera', status: 'Passed' },
-    { name: 'Fan, Thermals & CPU Stress Test', status: 'Passed' },
-    { name: 'SSD Health & Read/Write Speeds', status: 'Passed' },
-  ];
 
   const getConditionColor = (cond: LaptopCondition) => {
     switch (cond) {

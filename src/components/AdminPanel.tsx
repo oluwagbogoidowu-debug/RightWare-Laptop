@@ -1821,7 +1821,7 @@ export default function AdminPanel({
             {/* Description Textarea */}
             <div className="space-y-1.5">
               <label className="block font-sans text-xs font-bold text-neutral-700">
-                Detailed Condition & Diagnostic Description
+                Detailed Condition Description
               </label>
               <textarea
                 value={formDescription}
@@ -2206,10 +2206,10 @@ export default function AdminPanel({
                   </div>
                 </div>
 
-                {/* Section 3: Detailed Condition & Diagnostic Description */}
+                {/* Section 3: Detailed Condition Description */}
                 <div className="space-y-1.5 border border-[#E5E5E5] p-4 bg-white">
                   <label className="block font-sans text-xs font-bold text-neutral-700">
-                    Detailed Condition & Diagnostic Description
+                    Detailed Condition Description
                   </label>
                   <textarea
                     value={editForm.description || ''}
