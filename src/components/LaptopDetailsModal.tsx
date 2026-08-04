@@ -12,7 +12,7 @@ interface LaptopDetailsModalProps {
 }
 
 export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsModalProps) {
-  const [activeTab, setActiveTab] = useState<'specs' | 'condition' | 'diagnostics'>('specs');
+  const [activeTab, setActiveTab] = useState<'specs' | 'condition'>('specs');
   const [activeImage, setActiveImage] = useState<string>('');
   const [bookingForm, setBookingForm] = useState({ name: '', phone: '', location: 'Lagos' });
   const [bookingSuccess, setBookingSuccess] = useState(false);
@@ -210,19 +210,9 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
                         activeTab === 'condition' 
                           ? 'border-b-2 border-[#111111] text-[#111111]' 
                           : 'text-[#6B6B6B] hover:text-[#111111]'
-                      } mr-5`}
-                    >
-                      Detailed Condition
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('diagnostics')}
-                      className={`pb-2.5 font-sans font-semibold text-xs uppercase tracking-wider cursor-pointer whitespace-nowrap ${
-                        activeTab === 'diagnostics' 
-                          ? 'border-b-2 border-[#111111] text-[#111111]' 
-                          : 'text-[#6B6B6B] hover:text-[#111111]'
                       }`}
                     >
-                      Diagnostic Description
+                      Detailed Condition
                     </button>
                   </div>
 
@@ -246,9 +236,12 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
                       <div className="flex justify-between items-center py-1.5 border-b border-dashed border-[#F0F0F0]">
                         <span className="text-[#6B6B6B] flex items-center space-x-2">
                           <HardDrive className="h-3.5 w-3.5" />
-                          <span>Storage (SSD)</span>
+                          <span>Storage Type & Capacity</span>
                         </span>
-                        <span className="font-sans font-semibold text-[#111111] text-right">{laptop.specs.storage}</span>
+                        <span className="font-sans font-semibold text-[#111111] text-right">
+                          {laptop.specs.storage}
+                          {laptop.specs.storageType && !laptop.specs.storage.toLowerCase().includes(laptop.specs.storageType.toLowerCase()) ? ` (${laptop.specs.storageType})` : ''}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center py-1.5 border-b border-dashed border-[#F0F0F0]">
                         <span className="text-[#6B6B6B] flex items-center space-x-2">
@@ -327,55 +320,6 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
                             <span className="text-[#6B6B6B] text-[11px]">Battery tested at {laptop.batteryHealth || 85}% health capacity with original OEM charger included.</span>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Tab Content: Diagnostics Description */}
-                  {activeTab === 'diagnostics' && (
-                    <div className="mt-4 space-y-3 text-xs animate-fade-in">
-                      {/* Hardware Benchmark Audit Bar */}
-                      <div className="bg-[#111111] text-white p-3 flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <Activity className="h-4 w-4 text-[#FF3B30] animate-pulse" />
-                          <div>
-                            <span className="font-mono text-[10px] uppercase font-bold text-neutral-300 block">Hardware Audit & Thermal Stress</span>
-                            <span className="font-sans text-[11px] font-semibold text-emerald-400">All 8 Core Diagnostics Passed</span>
-                          </div>
-                        </div>
-                        <span className="font-mono text-[9px] bg-neutral-800 border border-neutral-700 px-2 py-0.5 text-neutral-300">
-                          S/N: {laptop.serialNumber}
-                        </span>
-                      </div>
-
-                      {/* Detailed Diagnostic List */}
-                      {laptop.description && (
-                        <div className="p-3 bg-neutral-50 border border-[#E5E5E5] space-y-1">
-                          <span className="font-mono text-[9px] text-neutral-500 uppercase font-bold block">
-                            Hardware & Thermal Benchmark Summary
-                          </span>
-                          <p className="font-sans text-xs text-[#222222] leading-relaxed whitespace-pre-line">
-                            {laptop.description}
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="space-y-1.5">
-                        {diagnosticsList.map((test, i) => (
-                          <div key={i} className="flex justify-between items-center py-1.5 bg-[#F7F7F7] border border-[#E5E5E5] px-3">
-                            <span className="font-sans font-medium text-[#111111]">{test.name}</span>
-                            <span className="font-mono text-[10px] text-emerald-600 font-bold flex items-center space-x-1">
-                              <Check className="h-3 w-3" />
-                              <span>Passed</span>
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Engineer Signoff */}
-                      <div className="pt-2 flex items-center justify-between text-[10px] font-mono text-[#6B6B6B] border-t border-dashed border-[#E5E5E5]">
-                        <span>Senior Hardware Test Bench: OK</span>
-                        <span className="text-[#111111] font-bold">Lagos Workshop Certified</span>
                       </div>
                     </div>
                   )}

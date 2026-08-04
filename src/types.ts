@@ -2,6 +2,7 @@ export interface LaptopSpecs {
   cpu: string;
   ram: string;
   storage: string;
+  storageType?: string;
   screen: string;
   graphics?: string;
 }

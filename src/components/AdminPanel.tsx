@@ -152,6 +152,14 @@ export const STORAGE_OPTIONS = [
   '8TB'
 ];
 
+export const STORAGE_TYPE_OPTIONS = [
+  'SSD',
+  'HDD',
+  'NVMe SSD',
+  'eMMC',
+  'SSHD (Hybrid)'
+];
+
 export const SCREEN_OPTIONS = [
   '11" HD Display',
   '12" HD Display',
@@ -399,6 +407,7 @@ export default function AdminPanel({
   const [formCpu, setFormCpu] = useState('');
   const [formRam, setFormRam] = useState('16GB');
   const [formStorage, setFormStorage] = useState('512GB');
+  const [formStorageType, setFormStorageType] = useState('SSD');
   const [formScreen, setFormScreen] = useState('14" Retina Display');
   const [formGraphics, setFormGraphics] = useState('Intel Iris Xe Graphics');
   const [formImages, setFormImages] = useState<string[]>([]);
@@ -670,6 +679,7 @@ export default function AdminPanel({
         cpu: editForm.specs?.cpu || editingLaptop.specs.cpu,
         ram: editForm.specs?.ram || editingLaptop.specs.ram,
         storage: editForm.specs?.storage || editingLaptop.specs.storage,
+        storageType: editForm.specs?.storageType ?? editingLaptop.specs.storageType ?? 'SSD',
         screen: editForm.specs?.screen || editingLaptop.specs.screen,
         graphics: editForm.specs?.graphics || editingLaptop.specs.graphics
       },
@@ -770,6 +780,7 @@ export default function AdminPanel({
         cpu: formCpu,
         ram: formRam,
         storage: formStorage,
+        storageType: formStorageType,
         screen: formScreen,
         graphics: formGraphics
       },
@@ -1718,7 +1729,7 @@ export default function AdminPanel({
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <CustomSelect
                       label="RAM Size"
@@ -1733,13 +1744,25 @@ export default function AdminPanel({
 
                   <div>
                     <CustomSelect
-                      label="SSD / Storage"
+                      label="Storage Capacity"
                       required
                       value={formStorage}
                       options={STORAGE_OPTIONS}
                       onChange={setFormStorage}
                       placeholder="-- Select Storage --"
                       customPlaceholder="Type custom storage size..."
+                    />
+                  </div>
+
+                  <div>
+                    <CustomSelect
+                      label="Storage Type (SSD / HDD)"
+                      required
+                      value={formStorageType}
+                      options={STORAGE_TYPE_OPTIONS}
+                      onChange={setFormStorageType}
+                      placeholder="-- Select Storage Type --"
+                      customPlaceholder="Type custom storage type (SSD/HDD)..."
                     />
                   </div>
                 </div>
@@ -2138,7 +2161,7 @@ export default function AdminPanel({
 
                     <div>
                       <CustomSelect
-                        label="SSD / Storage"
+                        label="Storage Capacity"
                         required
                         value={editForm.specs?.storage || ''}
                         options={STORAGE_OPTIONS}
@@ -2148,6 +2171,21 @@ export default function AdminPanel({
                         }))}
                         placeholder="-- Select Storage --"
                         customPlaceholder="Type custom storage size..."
+                      />
+                    </div>
+
+                    <div>
+                      <CustomSelect
+                        label="Storage Type (SSD / HDD)"
+                        required
+                        value={editForm.specs?.storageType ?? editingLaptop?.specs?.storageType ?? 'SSD'}
+                        options={STORAGE_TYPE_OPTIONS}
+                        onChange={(val) => setEditForm((prev) => ({
+                          ...prev,
+                          specs: { ...(prev.specs || editForm.specs || { cpu: '', ram: '', storage: '', screen: '', graphics: '' }), storageType: val }
+                        }))}
+                        placeholder="-- Select Storage Type --"
+                        customPlaceholder="Type custom storage type (SSD/HDD)..."
                       />
                     </div>
 
