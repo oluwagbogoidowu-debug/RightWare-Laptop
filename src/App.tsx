@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Laptop, FilterState, FilterBudget, FilterBrand, FilterUse } from './types';
 import { ACTIVE_LAPTOPS, SOLD_LAPTOPS } from './data';
-import { seedInitialDataIfNeeded, subscribeLaptops } from './lib/firebaseService';
+import { seedInitialDataIfNeeded, subscribeLaptops, trackLaptopClick } from './lib/firebaseService';
 import { ChevronRight, ArrowUpRight, Battery, Shield, CheckCircle2, MessageSquare, PhoneCall, Home, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -80,6 +80,26 @@ export default function App() {
 
   // Active selected laptop for modal detail inspection
   const [selectedLaptop, setSelectedLaptop] = useState<Laptop | null>(null);
+
+  // Track link clicks when selecting a laptop
+  const handleSelectLaptop = (laptop: Laptop) => {
+    setSelectedLaptop(laptop);
+    trackLaptopClick(laptop.id);
+  };
+
+  // Check URL for direct laptop link (e.g., ?laptop=ID or #laptop-ID) and track click
+  useEffect(() => {
+    if (laptops.length === 0 && soldLaptops.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const laptopIdParam = params.get('laptop') || (window.location.hash.startsWith('#laptop-') ? window.location.hash.replace('#laptop-', '') : null);
+    if (laptopIdParam && !selectedLaptop) {
+      const found = laptops.find((l) => l.id === laptopIdParam) || soldLaptops.find((l) => l.id === laptopIdParam);
+      if (found) {
+        setSelectedLaptop(found);
+        trackLaptopClick(found.id);
+      }
+    }
+  }, [laptops, soldLaptops]);
 
   // Active side navigation drawer state
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
@@ -331,7 +351,7 @@ export default function App() {
             {/* Top 3 Latest Laptops Section */}
             <TopLaptopsHome
               topLaptops={top3Laptops}
-              onSelectLaptop={setSelectedLaptop}
+              onSelectLaptop={handleSelectLaptop}
               onViewAll={() => {
                 setCurrentTab('shop');
                 setTimeout(() => scrollToId('available-laptops'), 100);
@@ -512,7 +532,7 @@ export default function App() {
               filters={filters}
               onUpdateFilters={handleUpdateFilters}
               onResetFilters={handleResetFilters}
-              onSelectLaptop={setSelectedLaptop}
+              onSelectLaptop={handleSelectLaptop}
             />
           </>
         )}

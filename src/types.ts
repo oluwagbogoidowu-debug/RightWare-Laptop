@@ -33,6 +33,7 @@ export interface Laptop {
   buyerFeedback?: string;
   buyerName?: string;
   deliveredDate?: string;
+  clickCount?: number;
 }
 
 export interface Testimonial {

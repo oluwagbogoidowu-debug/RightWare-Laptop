@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CustomSelect, CustomMultiSelect } from './CustomSelect';
 import { Laptop, LaptopCondition, LaptopSpecs } from '../types';
-import { saveLaptopToFirestore, deleteLaptopFromFirestore, subscribeReservations } from '../lib/firebaseService';
+import { saveLaptopToFirestore, deleteLaptopFromFirestore, subscribeReservations, trackLaptopClick } from '../lib/firebaseService';
 import { uploadToCloudinary } from '../lib/cloudinaryService';
 import { formatNaira, convertGoogleDriveUrl } from '../lib/utils';
 import { auth, googleProvider, ALLOWED_ADMIN_EMAILS } from '../firebase';
@@ -44,7 +44,9 @@ import {
   Edit3,
   Calendar,
   PhoneCall,
-  Clock
+  Clock,
+  MousePointerClick,
+  Link
 } from 'lucide-react';
 
 export const GPU_OPTIONS = [
@@ -857,6 +859,14 @@ export default function AdminPanel({
     onUpdateLaptops(updated);
   };
 
+  // Copy laptop listing link & track click
+  const handleCopyLaptopLink = (laptop: Laptop) => {
+    const link = `${window.location.origin}${window.location.pathname}?laptop=${laptop.id}`;
+    navigator.clipboard.writeText(link);
+    trackLaptopClick(laptop.id);
+    triggerNotification(`Listing direct link copied for ${laptop.name}! (+1 Click Tracked)`);
+  };
+
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-[#F7F7F7] flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8 font-sans selection:bg-[#FF3B30] selection:text-white">
@@ -1119,33 +1129,42 @@ export default function AdminPanel({
           )}
 
         {/* Dashboard Quick Summary Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white border border-[#E5E5E5] p-4 shadow-xs">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
+          <div className="bg-white border border-[#E5E5E5] p-3.5 shadow-xs">
             <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Total Active Inventory</span>
-            <span className="font-display font-black text-2xl text-[#111111] mt-1.5 block">{laptops.length}</span>
-            <span className="font-sans text-[10px] text-[#6B6B6B] mt-1 block">Verified & cataloged units</span>
+            <span className="font-display font-black text-2xl text-[#111111] mt-1 block">{laptops.length}</span>
+            <span className="font-sans text-[10px] text-[#6B6B6B] mt-0.5 block">Verified & cataloged units</span>
           </div>
 
-          <div className="bg-white border border-[#E5E5E5] p-4 shadow-xs">
+          <div className="bg-white border border-[#E5E5E5] p-3.5 shadow-xs">
             <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Currently For Sale</span>
-            <span className="font-display font-black text-2xl text-[#FF3B30] mt-1.5 block">
+            <span className="font-display font-black text-2xl text-[#FF3B30] mt-1 block">
               {laptops.filter(l => l.isForSale !== false).length}
             </span>
-            <span className="font-sans text-[10px] text-emerald-600 mt-1 block">Listed on client catalog</span>
+            <span className="font-sans text-[10px] text-emerald-600 mt-0.5 block">Listed on client catalog</span>
           </div>
 
-          <div className="bg-white border border-[#E5E5E5] p-4 shadow-xs">
+          <div className="bg-white border border-[#E5E5E5] p-3.5 shadow-xs">
+            <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Tracked Link Clicks</span>
+            <span className="font-display font-black text-2xl text-[#111111] mt-1 block flex items-center space-x-1.5">
+              <span>{laptops.reduce((acc, l) => acc + (l.clickCount || 0), 0) + soldLaptops.reduce((acc, l) => acc + (l.clickCount || 0), 0)}</span>
+              <MousePointerClick className="h-4 w-4 text-[#FF3B30]" />
+            </span>
+            <span className="font-sans text-[10px] text-emerald-600 mt-0.5 block">Real-time link & view clicks</span>
+          </div>
+
+          <div className="bg-white border border-[#E5E5E5] p-3.5 shadow-xs">
             <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Hidden Listings</span>
-            <span className="font-display font-black text-2xl text-[#111111] mt-1.5 block">
+            <span className="font-display font-black text-2xl text-[#111111] mt-1 block">
               {laptops.filter(l => l.isForSale === false).length}
             </span>
-            <span className="font-sans text-[10px] text-neutral-400 mt-1 block">Drafts / Out of rotation</span>
+            <span className="font-sans text-[10px] text-neutral-400 mt-0.5 block">Drafts / Out of rotation</span>
           </div>
 
-          <div className="bg-white border border-[#E5E5E5] p-4 shadow-xs">
+          <div className="bg-white border border-[#E5E5E5] p-3.5 shadow-xs">
             <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Total Sold Units</span>
-            <span className="font-display font-black text-2xl text-neutral-500 mt-1.5 block">{soldLaptops.length}</span>
-            <span className="font-sans text-[10px] text-[#6B6B6B] mt-1 block">Archived client reviews</span>
+            <span className="font-display font-black text-2xl text-neutral-500 mt-1 block">{soldLaptops.length}</span>
+            <span className="font-sans text-[10px] text-[#6B6B6B] mt-0.5 block">Archived client reviews</span>
           </div>
         </div>
 
@@ -1228,6 +1247,7 @@ export default function AdminPanel({
                     <th className="p-4 font-bold">Spec Summary</th>
                     <th className="p-4 font-bold">Price</th>
                     <th className="p-4 font-bold">Stock Remaining</th>
+                    <th className="p-4 font-bold">Link Clicks</th>
                     <th className="p-4 font-bold">Listing Status</th>
                     <th className="p-4 font-bold text-right">Actions</th>
                   </tr>
@@ -1294,6 +1314,22 @@ export default function AdminPanel({
                         </div>
                       </td>
                       <td className="p-4">
+                        <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-1.5 bg-neutral-100 border border-[#E5E5E5] px-2.5 py-1 text-xs font-mono font-bold text-[#111111]">
+                            <MousePointerClick className="h-3.5 w-3.5 text-[#FF3B30]" />
+                            <span>{laptop.clickCount || 0}</span>
+                            <span className="text-[10px] text-neutral-500 font-sans font-normal">clicks</span>
+                          </div>
+                          <button
+                            onClick={() => handleCopyLaptopLink(laptop)}
+                            className="p-1.5 text-neutral-600 hover:text-[#FF3B30] hover:bg-neutral-100 border border-[#E5E5E5] transition-colors cursor-pointer"
+                            title="Copy listing direct link & track click"
+                          >
+                            <Link className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="p-4">
                         <button
                           onClick={() => handleToggleForSale(laptop.id)}
                           className="flex items-center space-x-2 text-xs font-medium cursor-pointer focus:outline-hidden"
@@ -1333,7 +1369,7 @@ export default function AdminPanel({
                   ))}
                   {laptops.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-[#6B6B6B] font-sans">
+                      <td colSpan={7} className="p-8 text-center text-[#6B6B6B] font-sans">
                         No product listings found. Click "Add Product Listing" to insert your first workstation.
                       </td>
                     </tr>

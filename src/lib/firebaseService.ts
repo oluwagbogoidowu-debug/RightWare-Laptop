@@ -8,7 +8,8 @@ import {
   deleteDoc, 
   onSnapshot, 
   query, 
-  serverTimestamp 
+  serverTimestamp,
+  increment 
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ACTIVE_LAPTOPS, SOLD_LAPTOPS, TESTIMONIALS } from '../data';
@@ -79,6 +80,19 @@ export async function saveLaptopToFirestore(laptop: Laptop) {
 export async function deleteLaptopFromFirestore(laptopId: string) {
   const docRef = doc(db, 'laptops', laptopId);
   await deleteDoc(docRef);
+}
+
+// Increment laptop link click count atomically
+export async function trackLaptopClick(laptopId: string) {
+  if (!laptopId) return;
+  try {
+    const docRef = doc(db, 'laptops', laptopId);
+    await updateDoc(docRef, {
+      clickCount: increment(1)
+    });
+  } catch (err) {
+    console.error('Error tracking laptop click:', err);
+  }
 }
 
 // Create a physical inspection reservation/hold

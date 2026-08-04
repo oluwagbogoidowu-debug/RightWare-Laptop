@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Laptop, LaptopCondition } from '../types';
-import { ArrowLeft, X, ShieldCheck, Battery, Cpu, HardDrive, Monitor, Check, Calendar, CheckCircle2, ShieldAlert, Clock, PhoneCall, Send } from 'lucide-react';
+import { ArrowLeft, X, ShieldCheck, Battery, Cpu, HardDrive, Monitor, Check, Calendar, CheckCircle2, ShieldAlert, Clock, PhoneCall, Send, Link, MousePointerClick } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { createReservationInFirestore } from '../lib/firebaseService';
+import { createReservationInFirestore, trackLaptopClick } from '../lib/firebaseService';
 import { formatNaira } from '../lib/utils';
 import SmartImage from './SmartImage';
 
@@ -17,6 +17,16 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
   const [bookingForm, setBookingForm] = useState({ name: '', phone: '', location: 'Lagos' });
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const handleCopyLink = () => {
+    if (!laptop) return;
+    const link = `${window.location.origin}${window.location.pathname}?laptop=${laptop.id}`;
+    navigator.clipboard.writeText(link);
+    trackLaptopClick(laptop.id);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2500);
+  };
 
   // Initialize active image when laptop changes
   React.useEffect(() => {
@@ -88,13 +98,24 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
               <span>•</span>
               <span className="text-[#FF3B30]">S/N: {laptop.serialNumber}</span>
             </div>
-            <button
-              onClick={onClose}
-              className="bg-neutral-100 hover:bg-[#FF3B30] text-[#111111] hover:text-white p-2 transition-colors cursor-pointer"
-              title="Close specification view"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={handleCopyLink}
+                className="flex items-center space-x-1.5 bg-neutral-100 hover:bg-neutral-200 text-[#111111] px-3 py-1.5 text-xs font-mono font-bold border border-[#E5E5E5] transition-colors cursor-pointer"
+                title="Copy shareable direct link to this laptop"
+              >
+                <Link className="h-3.5 w-3.5 text-[#FF3B30]" />
+                <span>{copiedLink ? 'Link Copied!' : 'Copy Direct Link'}</span>
+              </button>
+
+              <button
+                onClick={onClose}
+                className="bg-neutral-100 hover:bg-[#FF3B30] text-[#111111] hover:text-white p-2 transition-colors cursor-pointer"
+                title="Close specification view"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </header>
 
           {/* Full Bleed Content Layout */}
@@ -266,50 +287,16 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
                       </div>
 
                       {/* Detailed Inspection Items */}
-                      <div className="space-y-2">
-                        {laptop.description && (
-                          <div className="p-3 bg-neutral-50 border border-[#E5E5E5]">
-                            <span className="font-mono text-[9px] text-[#6B6B6B] uppercase font-bold block mb-1">
-                              Custom Inspector Notes & Summary
-                            </span>
-                            <p className="font-sans text-xs text-[#222222] leading-relaxed whitespace-pre-line">
-                              {laptop.description}
-                            </p>
-                          </div>
-                        )}
-
-                        <div className="p-2.5 bg-white border border-[#E5E5E5] flex items-start space-x-2.5">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                          <div>
-                            <span className="font-bold text-[#111111] block">Screen & Visual Clarity</span>
-                            <span className="text-[#6B6B6B] text-[11px]">100% spotless display panel. Free of dead pixels, pressure spots, backlight bleed, or keyboard impression marks.</span>
-                          </div>
+                      {laptop.description && (
+                        <div className="p-3 bg-neutral-50 border border-[#E5E5E5]">
+                          <span className="font-mono text-[9px] text-[#6B6B6B] uppercase font-bold block mb-1">
+                            Custom Inspector Notes & Summary
+                          </span>
+                          <p className="font-sans text-xs text-[#222222] leading-relaxed whitespace-pre-line">
+                            {laptop.description}
+                          </p>
                         </div>
-
-                        <div className="p-2.5 bg-white border border-[#E5E5E5] flex items-start space-x-2.5">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                          <div>
-                            <span className="font-bold text-[#111111] block">Chassis & Hinge Integrity</span>
-                            <span className="text-[#6B6B6B] text-[11px]">Original OEM casing. Smooth hinge motion with zero looseness or structural creaking.</span>
-                          </div>
-                        </div>
-
-                        <div className="p-2.5 bg-white border border-[#E5E5E5] flex items-start space-x-2.5">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                          <div>
-                            <span className="font-bold text-[#111111] block">Keyboard & Trackpad Feedback</span>
-                            <span className="text-[#6B6B6B] text-[11px]">Every key tested for crisp tactile bounce. Trackpad multi-gesture click mechanism operates smoothly.</span>
-                          </div>
-                        </div>
-
-                        <div className="p-2.5 bg-white border border-[#E5E5E5] flex items-start space-x-2.5">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                          <div>
-                            <span className="font-bold text-[#111111] block">Battery Retention</span>
-                            <span className="text-[#6B6B6B] text-[11px]">Battery tested at {laptop.batteryHealth || 85}% health capacity with original OEM charger included.</span>
-                          </div>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   )}
                 </div>
