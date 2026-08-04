@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Laptop, FilterState, FilterBudget, FilterBrand, FilterUse } from './types';
 import { ACTIVE_LAPTOPS, SOLD_LAPTOPS } from './data';
-import { seedInitialDataIfNeeded, subscribeLaptops, trackLaptopClick } from './lib/firebaseService';
+import { seedInitialDataIfNeeded, subscribeLaptops, trackLaptopClick, trackLaptopView } from './lib/firebaseService';
 import { ChevronRight, ArrowUpRight, Battery, Shield, CheckCircle2, MessageSquare, PhoneCall, Home, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -81,13 +81,13 @@ export default function App() {
   // Active selected laptop for modal detail inspection
   const [selectedLaptop, setSelectedLaptop] = useState<Laptop | null>(null);
 
-  // Track link clicks when selecting a laptop
+  // Track modal views when selecting a laptop from catalog
   const handleSelectLaptop = (laptop: Laptop) => {
     setSelectedLaptop(laptop);
-    trackLaptopClick(laptop.id);
+    trackLaptopView(laptop.id);
   };
 
-  // Check URL for direct laptop link (e.g., ?laptop=ID or #laptop-ID) and track click
+  // Check URL for direct shared laptop link (e.g., ?laptop=ID or #laptop-ID) and track direct link click
   useEffect(() => {
     if (laptops.length === 0 && soldLaptops.length === 0) return;
     const params = new URLSearchParams(window.location.search);
@@ -97,6 +97,7 @@ export default function App() {
       if (found) {
         setSelectedLaptop(found);
         trackLaptopClick(found.id);
+        trackLaptopView(found.id);
       }
     }
   }, [laptops, soldLaptops]);

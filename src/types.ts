@@ -34,6 +34,7 @@ export interface Laptop {
   buyerName?: string;
   deliveredDate?: string;
   clickCount?: number;
+  viewCount?: number;
 }
 
 export interface Testimonial {

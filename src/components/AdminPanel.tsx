@@ -1145,20 +1145,21 @@ export default function AdminPanel({
           </div>
 
           <div className="bg-white border border-[#E5E5E5] p-3.5 shadow-xs">
-            <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Tracked Link Clicks</span>
+            <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Total Catalog Views</span>
+            <span className="font-display font-black text-2xl text-[#111111] mt-1 block flex items-center space-x-1.5">
+              <span>{laptops.reduce((acc, l) => acc + (l.viewCount || 0), 0) + soldLaptops.reduce((acc, l) => acc + (l.viewCount || 0), 0)}</span>
+              <Eye className="h-4 w-4 text-blue-600" />
+            </span>
+            <span className="font-sans text-[10px] text-blue-600 mt-0.5 block">Site visitors viewing details</span>
+          </div>
+
+          <div className="bg-white border border-[#E5E5E5] p-3.5 shadow-xs">
+            <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Direct Link Clicks</span>
             <span className="font-display font-black text-2xl text-[#111111] mt-1 block flex items-center space-x-1.5">
               <span>{laptops.reduce((acc, l) => acc + (l.clickCount || 0), 0) + soldLaptops.reduce((acc, l) => acc + (l.clickCount || 0), 0)}</span>
               <MousePointerClick className="h-4 w-4 text-[#FF3B30]" />
             </span>
-            <span className="font-sans text-[10px] text-emerald-600 mt-0.5 block">Real-time link & view clicks</span>
-          </div>
-
-          <div className="bg-white border border-[#E5E5E5] p-3.5 shadow-xs">
-            <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Hidden Listings</span>
-            <span className="font-display font-black text-2xl text-[#111111] mt-1 block">
-              {laptops.filter(l => l.isForSale === false).length}
-            </span>
-            <span className="font-sans text-[10px] text-neutral-400 mt-0.5 block">Drafts / Out of rotation</span>
+            <span className="font-sans text-[10px] text-emerald-600 mt-0.5 block">Shared link URL visits</span>
           </div>
 
           <div className="bg-white border border-[#E5E5E5] p-3.5 shadow-xs">
@@ -1247,6 +1248,7 @@ export default function AdminPanel({
                     <th className="p-4 font-bold">Spec Summary</th>
                     <th className="p-4 font-bold">Price</th>
                     <th className="p-4 font-bold">Stock Remaining</th>
+                    <th className="p-4 font-bold">Catalog Views</th>
                     <th className="p-4 font-bold">Link Clicks</th>
                     <th className="p-4 font-bold">Listing Status</th>
                     <th className="p-4 font-bold text-right">Actions</th>
@@ -1314,6 +1316,13 @@ export default function AdminPanel({
                         </div>
                       </td>
                       <td className="p-4">
+                        <div className="flex items-center space-x-1.5 bg-blue-50 border border-blue-200 px-2.5 py-1 text-xs font-mono font-bold text-blue-800 w-fit">
+                          <Eye className="h-3.5 w-3.5 text-blue-600" />
+                          <span>{laptop.viewCount || 0}</span>
+                          <span className="text-[10px] text-blue-600 font-sans font-normal">views</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
                         <div className="flex items-center space-x-2">
                           <div className="flex items-center space-x-1.5 bg-neutral-100 border border-[#E5E5E5] px-2.5 py-1 text-xs font-mono font-bold text-[#111111]">
                             <MousePointerClick className="h-3.5 w-3.5 text-[#FF3B30]" />
@@ -1369,7 +1378,7 @@ export default function AdminPanel({
                   ))}
                   {laptops.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="p-8 text-center text-[#6B6B6B] font-sans">
+                      <td colSpan={8} className="p-8 text-center text-[#6B6B6B] font-sans">
                         No product listings found. Click "Add Product Listing" to insert your first workstation.
                       </td>
                     </tr>

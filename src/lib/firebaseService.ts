@@ -82,7 +82,20 @@ export async function deleteLaptopFromFirestore(laptopId: string) {
   await deleteDoc(docRef);
 }
 
-// Increment laptop link click count atomically
+// Increment laptop site view count (when visitors view details on site)
+export async function trackLaptopView(laptopId: string) {
+  if (!laptopId) return;
+  try {
+    const docRef = doc(db, 'laptops', laptopId);
+    await updateDoc(docRef, {
+      viewCount: increment(1)
+    });
+  } catch (err) {
+    console.error('Error tracking laptop view:', err);
+  }
+}
+
+// Increment laptop link click count atomically (direct link visits/clicks)
 export async function trackLaptopClick(laptopId: string) {
   if (!laptopId) return;
   try {
