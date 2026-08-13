@@ -1,9 +1,16 @@
 import React from 'react';
 import { TESTIMONIALS } from '../data';
+import { Testimonial } from '../types';
 import { Star, ShieldCheck } from 'lucide-react';
 import SmartImage from './SmartImage';
 
-export default function Testimonials() {
+interface TestimonialsProps {
+  testimonials?: Testimonial[];
+}
+
+export default function Testimonials({ testimonials }: TestimonialsProps) {
+  const displayList = (testimonials && testimonials.length > 0) ? testimonials : TESTIMONIALS;
+
   return (
     <section id="testimonials" className="py-16 sm:py-24 bg-[#F7F7F7] border-t border-[#E5E5E5]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -20,14 +27,14 @@ export default function Testimonials() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 mt-12 sm:mt-16">
-          {TESTIMONIALS.map((t) => (
+          {displayList.map((t) => (
             <div 
               key={t.id} 
-              className="bg-white border border-[#E5E5E5] p-6 sm:p-8 flex flex-col justify-between"
+              className="bg-white border border-[#E5E5E5] p-6 sm:p-8 flex flex-col justify-between hover:border-neutral-300 transition-all shadow-2xs"
             >
               <div>
                 <div className="flex items-center space-x-1">
-                  {[...Array(t.rating)].map((_, i) => (
+                  {[...Array(t.rating || 5)].map((_, i) => (
                     <Star key={i} className="h-4 w-4 fill-[#FF3B30] text-[#FF3B30]" />
                   ))}
                 </div>
@@ -38,9 +45,9 @@ export default function Testimonials() {
               </div>
 
               <div className="flex items-center space-x-3.5 pt-6 mt-6 border-t border-[#F0F0F0]">
-                <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 border border-[#E5E5E5]">
+                <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 border border-[#E5E5E5] bg-neutral-100">
                   <SmartImage
-                    src={t.avatar}
+                    src={t.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'}
                     alt={t.name}
                     className="w-full h-full object-cover filter grayscale"
                   />
@@ -55,9 +62,11 @@ export default function Testimonials() {
                   <p className="font-sans text-[11px] text-[#6B6B6B] truncate">
                     {t.role}
                   </p>
-                  <p className="font-mono text-[9px] text-[#FF3B30] mt-0.5 uppercase tracking-wider">
-                    Bought: {t.laptopBought}
-                  </p>
+                  {t.laptopBought && (
+                    <p className="font-mono text-[9px] text-[#FF3B30] mt-0.5 uppercase tracking-wider truncate">
+                      Bought: {t.laptopBought}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

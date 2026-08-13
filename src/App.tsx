@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Laptop, FilterState, FilterBudget, FilterBrand, FilterUse } from './types';
+import { Laptop, Testimonial, FilterState, FilterBudget, FilterBrand, FilterUse } from './types';
 import { ACTIVE_LAPTOPS, SOLD_LAPTOPS } from './data';
-import { seedInitialDataIfNeeded, subscribeLaptops, trackLaptopView } from './lib/firebaseService';
+import { seedInitialDataIfNeeded, subscribeLaptops, subscribeTestimonials, trackLaptopView } from './lib/firebaseService';
 import { ChevronRight, ArrowUpRight, Battery, Shield, CheckCircle2, MessageSquare, PhoneCall, Home, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -20,6 +20,7 @@ import TopLaptopsHome from './components/TopLaptopsHome';
 export default function App() {
   const [laptops, setLaptops] = useState<Laptop[]>(ACTIVE_LAPTOPS);
   const [soldLaptops, setSoldLaptops] = useState<Laptop[]>(SOLD_LAPTOPS);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
 
   // Initialize and subscribe to Firestore
   useEffect(() => {
@@ -27,7 +28,7 @@ export default function App() {
     seedInitialDataIfNeeded();
 
     // Subscribe to real-time changes
-    const unsubscribe = subscribeLaptops((allLaptops) => {
+    const unsubscribeLaptops = subscribeLaptops((allLaptops) => {
       if (allLaptops.length > 0) {
         const active = allLaptops.filter((item) => !item.isSold);
         const sold = allLaptops.filter((item) => item.isSold);
@@ -36,7 +37,14 @@ export default function App() {
       }
     });
 
-    return () => unsubscribe();
+    const unsubscribeTestimonials = subscribeTestimonials((items) => {
+      setTestimonials(items);
+    });
+
+    return () => {
+      unsubscribeLaptops();
+      unsubscribeTestimonials();
+    };
   }, []);
 
   // Check if we are in admin view (either /admin pathname or #admin hash)
@@ -509,7 +517,7 @@ export default function App() {
             <RecentlyDelivered soldLaptops={soldLaptops} />
 
             {/* Short trustworthy reviews block */}
-            <Testimonials />
+            <Testimonials testimonials={testimonials} />
           </>
         ) : (
           <>

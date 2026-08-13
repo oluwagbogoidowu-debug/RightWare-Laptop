@@ -135,3 +135,15 @@ export function subscribeTestimonials(onData: (testimonials: Testimonial[]) => v
     console.error('Error subscribing to testimonials:', err);
   });
 }
+
+// Add or update a testimonial in Firestore
+export async function saveTestimonialToFirestore(testimonial: Testimonial) {
+  const docRef = doc(db, 'testimonials', testimonial.id);
+  await setDoc(docRef, testimonial, { merge: true });
+}
+
+// Delete a testimonial from Firestore
+export async function deleteTestimonialFromFirestore(testimonialId: string) {
+  const docRef = doc(db, 'testimonials', testimonialId);
+  await deleteDoc(docRef);
+}

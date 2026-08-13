@@ -45,6 +45,7 @@ export interface Testimonial {
   avatar: string;
   verifiedPurchase: boolean;
   laptopBought: string;
+  soldLaptopId?: string;
 }
 
 export type FilterBudget = 'all' | 'under-400' | '400-700' | '700-1000' | 'above-1000';

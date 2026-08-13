@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { CustomSelect, CustomMultiSelect } from './CustomSelect';
-import { Laptop, LaptopCondition, LaptopSpecs } from '../types';
-import { saveLaptopToFirestore, deleteLaptopFromFirestore, subscribeReservations } from '../lib/firebaseService';
+import { Laptop, LaptopCondition, LaptopSpecs, Testimonial } from '../types';
+import { 
+  saveLaptopToFirestore, 
+  deleteLaptopFromFirestore, 
+  subscribeReservations,
+  subscribeTestimonials,
+  saveTestimonialToFirestore,
+  deleteTestimonialFromFirestore
+} from '../lib/firebaseService';
 import { uploadToCloudinary } from '../lib/cloudinaryService';
 import { formatNaira, convertGoogleDriveUrl } from '../lib/utils';
 import { auth, googleProvider, ALLOWED_ADMIN_EMAILS } from '../firebase';
@@ -44,7 +51,10 @@ import {
   Edit3,
   Calendar,
   PhoneCall,
-  Clock
+  Clock,
+  Quote,
+  MessageSquare,
+  Sparkles
 } from 'lucide-react';
 
 export const GPU_OPTIONS = [
@@ -424,13 +434,173 @@ export default function AdminPanel({
   });
 
   const [reservations, setReservations] = useState<any[]>([]);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
 
   useEffect(() => {
-    const unsubscribe = subscribeReservations((data) => {
+    const unsubscribeRes = subscribeReservations((data) => {
       setReservations(data);
     });
-    return () => unsubscribe();
+    const unsubscribeTesti = subscribeTestimonials((data) => {
+      setTestimonials(data);
+    });
+    return () => {
+      unsubscribeRes();
+      unsubscribeTesti();
+    };
   }, []);
+
+  // Testimonial Modal & Form State
+  const [isTestimonialModalOpen, setIsTestimonialModalOpen] = useState(false);
+  const [editingTestimonialId, setEditingTestimonialId] = useState<string | null>(null);
+  const [testiName, setTestiName] = useState('');
+  const [testiRole, setTestiRole] = useState('Verified Client');
+  const [testiQuote, setTestiQuote] = useState('');
+  const [testiRating, setTestiRating] = useState<number>(5);
+  const [testiAvatar, setTestiAvatar] = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200');
+  const [testiVerified, setTestiVerified] = useState(true);
+  const [testiLaptopBought, setTestiLaptopBought] = useState('');
+  const [testiSoldLaptopId, setTestiSoldLaptopId] = useState('');
+
+  // Sold Laptop Review Modal / Inline Editor State
+  const [editingSoldLaptop, setEditingSoldLaptop] = useState<Laptop | null>(null);
+  const [editBuyerName, setEditBuyerName] = useState('');
+  const [editBuyerFeedback, setEditBuyerFeedback] = useState('');
+  const [editDeliveredDate, setEditDeliveredDate] = useState('');
+
+  const handleOpenAddTestimonial = (soldLaptop?: Laptop) => {
+    if (soldLaptop) {
+      setEditingTestimonialId(null);
+      setTestiName(soldLaptop.buyerName || 'Verified Client');
+      setTestiRole('Verified Buyer, Lagos');
+      setTestiQuote(soldLaptop.buyerFeedback || '');
+      setTestiRating(5);
+      setTestiAvatar(soldLaptop.image || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200');
+      setTestiVerified(true);
+      setTestiLaptopBought(soldLaptop.name);
+      setTestiSoldLaptopId(soldLaptop.id);
+    } else {
+      setEditingTestimonialId(null);
+      setTestiName('');
+      setTestiRole('Verified Buyer');
+      setTestiQuote('');
+      setTestiRating(5);
+      setTestiAvatar('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200');
+      setTestiVerified(true);
+      setTestiLaptopBought('');
+      setTestiSoldLaptopId('');
+    }
+    setIsTestimonialModalOpen(true);
+  };
+
+  const handleOpenEditTestimonial = (t: Testimonial) => {
+    setEditingTestimonialId(t.id);
+    setTestiName(t.name);
+    setTestiRole(t.role);
+    setTestiQuote(t.quote);
+    setTestiRating(t.rating || 5);
+    setTestiAvatar(t.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200');
+    setTestiVerified(t.verifiedPurchase);
+    setTestiLaptopBought(t.laptopBought);
+    setTestiSoldLaptopId(t.soldLaptopId || '');
+    setIsTestimonialModalOpen(true);
+  };
+
+  const handleSelectSoldLaptopForTestimonial = (soldId: string) => {
+    setTestiSoldLaptopId(soldId);
+    if (!soldId) return;
+    const found = soldLaptops.find(s => s.id === soldId);
+    if (found) {
+      setTestiLaptopBought(found.name);
+      if (!testiName && found.buyerName) setTestiName(found.buyerName);
+      if (!testiQuote && found.buyerFeedback) setTestiQuote(found.buyerFeedback);
+      if (found.image) setTestiAvatar(found.image);
+    }
+  };
+
+  const handleSaveTestimonialSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!testiName.trim() || !testiQuote.trim()) {
+      setNotification({ type: 'error', message: 'Please enter both client name and review quote.' });
+      return;
+    }
+
+    const newOrUpdatedTestimonial: Testimonial = {
+      id: editingTestimonialId || `testimonial_${Date.now()}`,
+      name: testiName.trim(),
+      role: testiRole.trim() || 'Verified Buyer',
+      quote: testiQuote.trim(),
+      rating: testiRating,
+      avatar: testiAvatar.trim() || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
+      verifiedPurchase: testiVerified,
+      laptopBought: testiLaptopBought.trim() || 'Workstation Laptop',
+      soldLaptopId: testiSoldLaptopId || undefined,
+    };
+
+    try {
+      await saveTestimonialToFirestore(newOrUpdatedTestimonial);
+
+      // If connected to a sold laptop, update the buyer name & feedback on that sold laptop doc in Firestore
+      if (testiSoldLaptopId) {
+        const found = soldLaptops.find(s => s.id === testiSoldLaptopId);
+        if (found) {
+          const updatedSoldDoc: Laptop = {
+            ...found,
+            buyerName: testiName.trim(),
+            buyerFeedback: testiQuote.trim(),
+          };
+          await saveLaptopToFirestore(updatedSoldDoc);
+        }
+      }
+
+      setNotification({
+        type: 'success',
+        message: editingTestimonialId ? 'Testimonial updated & live on homepage!' : 'New testimonial published to homepage!'
+      });
+      setIsTestimonialModalOpen(false);
+    } catch (err: any) {
+      console.error('Error saving testimonial:', err);
+      setNotification({ type: 'error', message: 'Failed to save testimonial: ' + err.message });
+    }
+  };
+
+  const handleDeleteTestimonialClick = async (testimonialId: string) => {
+    if (!window.confirm('Are you sure you want to remove this testimonial from the homepage?')) return;
+    try {
+      await deleteTestimonialFromFirestore(testimonialId);
+      setNotification({ type: 'success', message: 'Testimonial removed from homepage.' });
+    } catch (err: any) {
+      console.error('Error deleting testimonial:', err);
+      setNotification({ type: 'error', message: 'Failed to remove testimonial.' });
+    }
+  };
+
+  const handleStartEditSoldLaptop = (laptop: Laptop) => {
+    setEditingSoldLaptop(laptop);
+    setEditBuyerName(laptop.buyerName || '');
+    setEditBuyerFeedback(laptop.buyerFeedback || '');
+    setEditDeliveredDate(laptop.deliveredDate || 'DELIVERED');
+  };
+
+  const handleSaveSoldLaptopReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSoldLaptop) return;
+
+    const updatedSold: Laptop = {
+      ...editingSoldLaptop,
+      buyerName: editBuyerName.trim() || 'Verified Client',
+      buyerFeedback: editBuyerFeedback.trim(),
+      deliveredDate: editDeliveredDate.trim() || 'DELIVERED'
+    };
+
+    try {
+      await saveLaptopToFirestore(updatedSold);
+      setNotification({ type: 'success', message: 'Sold laptop record updated successfully.' });
+      setEditingSoldLaptop(null);
+    } catch (err: any) {
+      console.error('Error updating sold laptop:', err);
+      setNotification({ type: 'error', message: 'Failed to update sold laptop record.' });
+    }
+  };
 
   // New Laptop Form State (Restored from draft if available)
   const [formName, setFormName] = useState(initialAddDraft?.formName ?? '');
@@ -2037,61 +2207,211 @@ export default function AdminPanel({
           </form>
         )}
 
-        {/* TAB 3: SOLD Products & Feedbacks list */}
+        {/* TAB 3: SOLD Products, Feedbacks list & Homepage Testimonials Manager */}
         {activeTab === 'sold' && (
-          <div className="bg-white border border-[#E5E5E5] overflow-hidden">
-            <div className="p-5 border-b border-[#E5E5E5] bg-[#FAF9F9]">
-              <h2 className="font-display font-bold text-sm text-[#111111]">
-                Archived Sales & Client Reviews
-              </h2>
-              <p className="font-sans text-xs text-[#6B6B6B] mt-1">
-                These laptops have been sold and completed. Reviews left by clients appear here.
-              </p>
+          <div className="space-y-8">
+            {/* 1. HOMEPAGE TESTIMONIALS MANAGER */}
+            <div className="bg-white border border-[#E5E5E5] overflow-hidden shadow-2xs">
+              <div className="p-5 border-b border-[#E5E5E5] bg-[#FAF9F9] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <Star className="h-4 w-4 text-[#FF3B30] fill-[#FF3B30]" />
+                    <h2 className="font-display font-bold text-sm text-[#111111]">
+                      Homepage Customer Testimonials ({testimonials.length})
+                    </h2>
+                    <span className="font-mono text-[9px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 border border-emerald-300">
+                      LIVE ON HOMEPAGE
+                    </span>
+                  </div>
+                  <p className="font-sans text-xs text-[#6B6B6B] mt-1">
+                    Add, edit, or remove customer stories displayed on the storefront. Connect them directly to sold laptop records.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenAddTestimonial()}
+                  className="bg-[#FF3B30] hover:bg-[#D32F2F] text-white font-sans text-xs font-bold px-4 py-2.5 transition-colors cursor-pointer flex items-center space-x-1.5 shrink-0"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Add Homepage Testimonial</span>
+                </button>
+              </div>
+
+              {/* Grid of Homepage Testimonials */}
+              <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-neutral-50/50">
+                {testimonials.map((t) => {
+                  const linkedSold = t.soldLaptopId ? soldLaptops.find(s => s.id === t.soldLaptopId) : null;
+                  return (
+                    <div key={t.id} className="bg-white border border-[#E5E5E5] p-4 flex flex-col justify-between space-y-4 shadow-xs hover:border-neutral-300 transition-all">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-1">
+                            {[...Array(t.rating || 5)].map((_, i) => (
+                              <Star key={i} className="h-3.5 w-3.5 fill-[#FF3B30] text-[#FF3B30]" />
+                            ))}
+                          </div>
+                          {t.verifiedPurchase && (
+                            <span className="font-mono text-[9px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 flex items-center space-x-1">
+                              <ShieldCheck className="h-3 w-3" />
+                              <span>Verified Buyer</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="font-sans text-xs italic text-[#222222] bg-neutral-50 p-2.5 border border-dashed border-[#E5E5E5] leading-relaxed">
+                          "{t.quote}"
+                        </p>
+                      </div>
+
+                      <div className="pt-3 border-t border-[#F0F0F0] space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                            <img src={t.avatar} alt={t.name} className="w-8 h-8 rounded-full object-cover border border-[#E5E5E5] filter grayscale shrink-0" />
+                            <div className="min-w-0">
+                              <h4 className="font-display font-bold text-xs text-[#111111] truncate">{t.name}</h4>
+                              <p className="font-sans text-[10px] text-[#6B6B6B] truncate">{t.role}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditTestimonial(t)}
+                              className="p-1.5 text-neutral-600 hover:text-[#111111] hover:bg-neutral-100 transition-colors cursor-pointer"
+                              title="Edit Testimonial"
+                            >
+                              <Edit3 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteTestimonialClick(t.id)}
+                              className="p-1.5 text-neutral-400 hover:text-[#FF3B30] hover:bg-rose-50 transition-colors cursor-pointer"
+                              title="Remove Testimonial"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="font-mono text-[9px] text-[#FF3B30] uppercase tracking-wider flex items-center space-x-1">
+                          <Package className="h-3 w-3 shrink-0" />
+                          <span className="truncate">Bought: {t.laptopBought}</span>
+                        </div>
+
+                        {linkedSold && (
+                          <span className="font-mono text-[9px] text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 block truncate">
+                            Linked Sold Laptop: S/N {linkedSold.serialNumber}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {testimonials.length === 0 && (
+                  <div className="col-span-full p-8 text-center text-[#6B6B6B] font-sans">
+                    <p className="font-bold text-sm text-neutral-700">No testimonials published yet.</p>
+                    <p className="text-xs text-neutral-500 mt-1">Click "Add Homepage Testimonial" above or promote a sold laptop review from the archive below.</p>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="divide-y divide-[#E5E5E5]">
-              {soldLaptops.map((laptop) => (
-                <div key={laptop.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-neutral-50/50 transition-colors">
-                  <div className="flex items-start space-x-4">
-                    <img 
-                      src={laptop.image} 
-                      alt={laptop.name} 
-                      className="w-16 h-12 object-cover border border-[#E5E5E5] flex-shrink-0 filter grayscale"
-                    />
-                    <div>
-                      <h4 className="font-sans font-bold text-[#111111] text-sm">
-                        {laptop.name}
-                      </h4>
-                      <p className="font-mono text-[9px] text-[#6B6B6B] mt-0.5">
-                        S/N: {laptop.serialNumber} • Buyer Name: <strong className="text-[#111111]">{laptop.buyerName || 'Verified Client'}</strong>
-                      </p>
-                      {laptop.buyerFeedback ? (
-                        <p className="font-sans text-xs text-[#555555] italic mt-2.5 bg-neutral-50 p-3 border border-dashed border-[#D4D4D4] leading-relaxed relative">
-                          "{laptop.buyerFeedback}"
-                        </p>
-                      ) : (
-                        <span className="font-mono text-[9px] text-neutral-400 block mt-2">
-                          No feedback message provided yet.
-                        </span>
-                      )}
-                    </div>
-                  </div>
+            {/* 2. ARCHIVED SALES & CLIENT REVIEWS */}
+            <div className="bg-white border border-[#E5E5E5] overflow-hidden shadow-2xs">
+              <div className="p-5 border-b border-[#E5E5E5] bg-[#FAF9F9]">
+                <h2 className="font-display font-bold text-sm text-[#111111]">
+                  Archived Sales & Client Reviews ({soldLaptops.length})
+                </h2>
+                <p className="font-sans text-xs text-[#6B6B6B] mt-1">
+                  Completed sales archive. Update buyer review details or publish any sold unit directly as a homepage testimonial.
+                </p>
+              </div>
 
-                  <div className="text-right flex-shrink-0">
-                    <span className="font-mono text-[10px] text-[#FF3B30] uppercase font-bold tracking-wider block">
-                      {laptop.deliveredDate || 'DELIVERED'}
-                    </span>
-                    <span className="font-mono text-sm font-bold text-neutral-400 line-through mt-1 block">
-                      {formatNaira(laptop.price)}
-                    </span>
+              <div className="divide-y divide-[#E5E5E5]">
+                {soldLaptops.map((laptop) => {
+                  const existingTestimonial = testimonials.find(
+                    t => t.soldLaptopId === laptop.id || (t.laptopBought && t.laptopBought.toLowerCase().trim() === laptop.name.toLowerCase().trim())
+                  );
+
+                  return (
+                    <div key={laptop.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-neutral-50/50 transition-colors">
+                      <div className="flex items-start space-x-4 flex-1">
+                        <img 
+                          src={laptop.image} 
+                          alt={laptop.name} 
+                          className="w-16 h-12 object-cover border border-[#E5E5E5] flex-shrink-0 filter grayscale"
+                        />
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center space-x-2">
+                            <h4 className="font-sans font-bold text-[#111111] text-sm">
+                              {laptop.name}
+                            </h4>
+                            {existingTestimonial && (
+                              <span className="font-mono text-[9px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 border border-emerald-300 flex items-center space-x-1">
+                                <CheckCircle className="h-3 w-3 text-emerald-600" />
+                                <span>Published on Homepage</span>
+                              </span>
+                            )}
+                          </div>
+
+                          <p className="font-mono text-[9px] text-[#6B6B6B]">
+                            S/N: {laptop.serialNumber} • Buyer Name: <strong className="text-[#111111]">{laptop.buyerName || 'Verified Client'}</strong>
+                          </p>
+
+                          {laptop.buyerFeedback ? (
+                            <p className="font-sans text-xs text-[#555555] italic mt-2 bg-neutral-50 p-3 border border-dashed border-[#D4D4D4] leading-relaxed relative">
+                              "{laptop.buyerFeedback}"
+                            </p>
+                          ) : (
+                            <span className="font-mono text-[9px] text-neutral-400 block mt-1">
+                              No feedback message recorded yet.
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row md:flex-col items-start sm:items-center md:items-end justify-between gap-3 shrink-0">
+                        <div className="text-left md:text-right">
+                          <span className="font-mono text-[10px] text-[#FF3B30] uppercase font-bold tracking-wider block">
+                            {laptop.deliveredDate || 'DELIVERED'}
+                          </span>
+                          <span className="font-mono text-sm font-bold text-neutral-400 line-through mt-0.5 block">
+                            {formatNaira(laptop.price)}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditSoldLaptop(laptop)}
+                            className="bg-neutral-100 hover:bg-neutral-200 text-[#111111] font-sans text-xs font-bold px-3 py-1.5 transition-colors cursor-pointer flex items-center space-x-1 border border-[#E5E5E5]"
+                          >
+                            <Edit3 className="h-3.5 w-3.5 text-neutral-600" />
+                            <span>Edit Review</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleOpenAddTestimonial(laptop)}
+                            className="bg-[#111111] hover:bg-[#FF3B30] text-white font-sans text-xs font-bold px-3 py-1.5 transition-colors cursor-pointer flex items-center space-x-1"
+                          >
+                            <Star className="h-3.5 w-3.5 fill-current text-amber-400" />
+                            <span>{existingTestimonial ? 'Update Testimonial' : '+ Publish as Testimonial'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {soldLaptops.length === 0 && (
+                  <div className="p-8 text-center text-[#6B6B6B] font-sans">
+                    No sold archive found.
                   </div>
-                </div>
-              ))}
-              {soldLaptops.length === 0 && (
-                <div className="p-8 text-center text-[#6B6B6B] font-sans">
-                  No sold archive found.
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -2586,6 +2906,263 @@ export default function AdminPanel({
       )}
 
       </main>
+
+      {/* MODAL 1: HOMEPAGE TESTIMONIAL EDITOR MODAL */}
+      {isTestimonialModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white border border-[#E5E5E5] max-w-2xl w-full my-8 p-6 shadow-2xl relative space-y-6">
+            <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-4">
+              <div>
+                <h3 className="font-display font-bold text-lg text-[#111111] flex items-center space-x-2">
+                  <Star className="h-5 w-5 text-[#FF3B30] fill-[#FF3B30]" />
+                  <span>{editingTestimonialId ? 'Edit Homepage Testimonial' : 'Add Homepage Testimonial'}</span>
+                </h3>
+                <p className="font-sans text-xs text-[#6B6B6B] mt-0.5">
+                  This review will appear live on the homepage Customer Stories section.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsTestimonialModalOpen(false)}
+                className="p-2 text-neutral-400 hover:text-[#111111] hover:bg-neutral-100 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTestimonialSubmit} className="space-y-5">
+              {/* Connect to Sold Laptop Selector */}
+              <div>
+                <label className="block font-sans text-xs font-bold text-[#111111] mb-1.5">
+                  Link to Sold Laptop Record (Optional)
+                </label>
+                <select
+                  value={testiSoldLaptopId}
+                  onChange={(e) => handleSelectSoldLaptopForTestimonial(e.target.value)}
+                  className="w-full bg-white border border-[#E5E5E5] p-2.5 font-sans text-xs text-[#111111] focus:outline-none focus:border-[#FF3B30]"
+                >
+                  <option value="">-- Custom / Not Linked to Sold Laptop --</option>
+                  {soldLaptops.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} (S/N: {s.serialNumber}) - Buyer: {s.buyerName || 'Client'}
+                    </option>
+                  ))}
+                </select>
+                <span className="font-mono text-[10px] text-neutral-500 mt-1 block">
+                  Selecting a sold laptop will auto-link the unit model and feedback text.
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-sans text-xs font-bold text-[#111111] mb-1">
+                    Client Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={testiName}
+                    onChange={(e) => setTestiName(e.target.value)}
+                    placeholder="e.g. Victor O."
+                    className="w-full border border-[#E5E5E5] p-2.5 font-sans text-xs text-[#111111] focus:outline-none focus:border-[#FF3B30]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-sans text-xs font-bold text-[#111111] mb-1">
+                    Role / Location / Tag
+                  </label>
+                  <input
+                    type="text"
+                    value={testiRole}
+                    onChange={(e) => setTestiRole(e.target.value)}
+                    placeholder="e.g. Senior Frontend Engineer, Victoria Island"
+                    className="w-full border border-[#E5E5E5] p-2.5 font-sans text-xs text-[#111111] focus:outline-none focus:border-[#FF3B30]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-sans text-xs font-bold text-[#111111] mb-1">
+                  Workstation Laptop Model *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={testiLaptopBought}
+                  onChange={(e) => setTestiLaptopBought(e.target.value)}
+                  placeholder="e.g. MacBook Pro 16 M1 Max"
+                  className="w-full border border-[#E5E5E5] p-2.5 font-sans text-xs text-[#111111] focus:outline-none focus:border-[#FF3B30]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-sans text-xs font-bold text-[#111111] mb-1">
+                  Client Review Quote *
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={testiQuote}
+                  onChange={(e) => setTestiQuote(e.target.value)}
+                  placeholder="Write the review or feedback quote here..."
+                  className="w-full border border-[#E5E5E5] p-2.5 font-sans text-xs text-[#111111] focus:outline-none focus:border-[#FF3B30]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                <div>
+                  <label className="block font-sans text-xs font-bold text-[#111111] mb-1">
+                    Star Rating (1 - 5 Stars)
+                  </label>
+                  <div className="flex items-center space-x-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setTestiRating(star)}
+                        className="p-1 cursor-pointer hover:scale-110 transition-transform"
+                      >
+                        <Star className={`h-6 w-6 ${star <= testiRating ? 'fill-[#FF3B30] text-[#FF3B30]' : 'text-neutral-300'}`} />
+                      </button>
+                    ))}
+                    <span className="font-mono text-xs font-bold ml-2 text-neutral-700">{testiRating} / 5</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-sans text-xs font-bold text-[#111111] mb-1">
+                    Verified Purchase Badge
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setTestiVerified(!testiVerified)}
+                    className={`px-3 py-2 border font-sans text-xs font-bold flex items-center space-x-2 cursor-pointer transition-colors ${
+                      testiVerified ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-neutral-100 border-[#E5E5E5] text-neutral-600'
+                    }`}
+                  >
+                    <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                    <span>{testiVerified ? 'Verified Purchase (Active)' : 'Unverified Buyer'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-sans text-xs font-bold text-[#111111] mb-1">
+                  Client Avatar Image URL
+                </label>
+                <input
+                  type="text"
+                  value={testiAvatar}
+                  onChange={(e) => setTestiAvatar(e.target.value)}
+                  placeholder="https://images.unsplash.com/..."
+                  className="w-full border border-[#E5E5E5] p-2.5 font-sans text-xs text-[#111111] focus:outline-none focus:border-[#FF3B30]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-[#E5E5E5]">
+                <button
+                  type="button"
+                  onClick={() => setIsTestimonialModalOpen(false)}
+                  className="px-4 py-2 border border-[#E5E5E5] hover:bg-neutral-100 font-sans text-xs font-bold text-neutral-700 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-[#FF3B30] hover:bg-[#D32F2F] text-white font-sans text-xs font-bold cursor-pointer transition-colors flex items-center space-x-1.5"
+                >
+                  <Star className="h-4 w-4 fill-current" />
+                  <span>{editingTestimonialId ? 'Save & Update Testimonial' : 'Publish to Homepage'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: EDIT SOLD LAPTOP REVIEW MODAL */}
+      {editingSoldLaptop && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white border border-[#E5E5E5] max-w-md w-full p-6 shadow-2xl space-y-5 relative">
+            <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3">
+              <div>
+                <h3 className="font-display font-bold text-sm text-[#111111]">
+                  Edit Sold Laptop Review
+                </h3>
+                <p className="font-mono text-[10px] text-neutral-500 mt-0.5">
+                  {editingSoldLaptop.name} (S/N: {editingSoldLaptop.serialNumber})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingSoldLaptop(null)}
+                className="p-1.5 text-neutral-400 hover:text-[#111111]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveSoldLaptopReview} className="space-y-4">
+              <div>
+                <label className="block font-sans text-xs font-bold text-[#111111] mb-1">
+                  Buyer / Client Name
+                </label>
+                <input
+                  type="text"
+                  value={editBuyerName}
+                  onChange={(e) => setEditBuyerName(e.target.value)}
+                  placeholder="e.g. Oluwaseun A."
+                  className="w-full border border-[#E5E5E5] p-2.5 font-sans text-xs text-[#111111] focus:outline-none focus:border-[#FF3B30]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-sans text-xs font-bold text-[#111111] mb-1">
+                  Delivered Tag / Date
+                </label>
+                <input
+                  type="text"
+                  value={editDeliveredDate}
+                  onChange={(e) => setEditDeliveredDate(e.target.value)}
+                  placeholder="e.g. DELIVERED MARCH 2026"
+                  className="w-full border border-[#E5E5E5] p-2.5 font-sans text-xs text-[#111111] focus:outline-none focus:border-[#FF3B30]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-sans text-xs font-bold text-[#111111] mb-1">
+                  Buyer Review / Feedback
+                </label>
+                <textarea
+                  rows={3}
+                  value={editBuyerFeedback}
+                  onChange={(e) => setEditBuyerFeedback(e.target.value)}
+                  placeholder="Enter feedback review provided by buyer..."
+                  className="w-full border border-[#E5E5E5] p-2.5 font-sans text-xs text-[#111111] focus:outline-none focus:border-[#FF3B30]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end space-x-2 pt-3 border-t border-[#E5E5E5]">
+                <button
+                  type="button"
+                  onClick={() => setEditingSoldLaptop(null)}
+                  className="px-4 py-2 border border-[#E5E5E5] hover:bg-neutral-100 font-sans text-xs font-bold text-neutral-700 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#111111] hover:bg-[#FF3B30] text-white font-sans text-xs font-bold cursor-pointer transition-colors"
+                >
+                  Save Feedback
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
         {/* Footer copyright inside standalone container */}
         <footer className="border-t border-[#E5E5E5] py-5 px-6 text-center font-mono text-[9px] text-neutral-400 bg-neutral-50/50">
