@@ -33,7 +33,6 @@ export interface Laptop {
   buyerFeedback?: string;
   buyerName?: string;
   deliveredDate?: string;
-  clickCount?: number;
   viewCount?: number;
 }
 

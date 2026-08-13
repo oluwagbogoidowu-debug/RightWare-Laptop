@@ -95,19 +95,6 @@ export async function trackLaptopView(laptopId: string) {
   }
 }
 
-// Increment laptop link click count atomically (direct link visits/clicks)
-export async function trackLaptopClick(laptopId: string) {
-  if (!laptopId) return;
-  try {
-    const docRef = doc(db, 'laptops', laptopId);
-    await updateDoc(docRef, {
-      clickCount: increment(1)
-    });
-  } catch (err) {
-    console.error('Error tracking laptop click:', err);
-  }
-}
-
 // Create a physical inspection reservation/hold
 export async function createReservationInFirestore(reservation: ReservationData) {
   const colRef = collection(db, 'reservations');

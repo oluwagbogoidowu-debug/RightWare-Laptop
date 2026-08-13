@@ -33,7 +33,7 @@ export default function Footer() {
             <ul className="space-y-3 font-sans text-xs text-[#999999]">
               <li className="flex items-start space-x-2.5">
                 <MapPin className="h-4 w-4 text-[#FF3B30] flex-shrink-0 mt-0.5" />
-                <span>Suite 12B, Ground Floor, Computer Village, Ikeja, Lagos, Nigeria</span>
+                <span>17 YISA STREET, OFF IJESHA ROAD, SURULERE, LAGOS.</span>
               </li>
               <li className="flex items-center space-x-2.5">
                 <Phone className="h-4 w-4 text-[#FF3B30] flex-shrink-0" />
@@ -41,7 +41,7 @@ export default function Footer() {
               </li>
               <li className="flex items-center space-x-2.5">
                 <Mail className="h-4 w-4 text-[#FF3B30] flex-shrink-0" />
-                <span>sales@rightwarelaptops.com</span>
+                <span>Rightware0@gmail.com</span>
               </li>
             </ul>
           </div>

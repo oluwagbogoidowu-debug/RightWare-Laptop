@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Laptop, LaptopCondition } from '../types';
-import { ArrowLeft, X, ShieldCheck, Battery, Cpu, HardDrive, Monitor, Check, Calendar, CheckCircle2, ShieldAlert, Clock, PhoneCall, Send, Link, MousePointerClick } from 'lucide-react';
+import { ArrowLeft, X, ShieldCheck, Battery, Cpu, HardDrive, Monitor, Check, Calendar, CheckCircle2, ShieldAlert, Clock, PhoneCall, Send, Link } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { createReservationInFirestore, trackLaptopClick } from '../lib/firebaseService';
+import { createReservationInFirestore } from '../lib/firebaseService';
 import { formatNaira } from '../lib/utils';
 import SmartImage from './SmartImage';
 
@@ -23,7 +23,6 @@ export default function LaptopDetailsModal({ laptop, onClose }: LaptopDetailsMod
     if (!laptop) return;
     const link = `${window.location.origin}${window.location.pathname}?laptop=${laptop.id}`;
     navigator.clipboard.writeText(link);
-    trackLaptopClick(laptop.id);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2500);
   };

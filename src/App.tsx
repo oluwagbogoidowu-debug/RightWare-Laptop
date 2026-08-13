@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Laptop, FilterState, FilterBudget, FilterBrand, FilterUse } from './types';
 import { ACTIVE_LAPTOPS, SOLD_LAPTOPS } from './data';
-import { seedInitialDataIfNeeded, subscribeLaptops, trackLaptopClick, trackLaptopView } from './lib/firebaseService';
+import { seedInitialDataIfNeeded, subscribeLaptops, trackLaptopView } from './lib/firebaseService';
 import { ChevronRight, ArrowUpRight, Battery, Shield, CheckCircle2, MessageSquare, PhoneCall, Home, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -96,7 +96,6 @@ export default function App() {
       const found = laptops.find((l) => l.id === laptopIdParam) || soldLaptops.find((l) => l.id === laptopIdParam);
       if (found) {
         setSelectedLaptop(found);
-        trackLaptopClick(found.id);
         trackLaptopView(found.id);
       }
     }

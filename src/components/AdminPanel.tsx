@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CustomSelect, CustomMultiSelect } from './CustomSelect';
 import { Laptop, LaptopCondition, LaptopSpecs } from '../types';
-import { saveLaptopToFirestore, deleteLaptopFromFirestore, subscribeReservations, trackLaptopClick } from '../lib/firebaseService';
+import { saveLaptopToFirestore, deleteLaptopFromFirestore, subscribeReservations } from '../lib/firebaseService';
 import { uploadToCloudinary } from '../lib/cloudinaryService';
 import { formatNaira, convertGoogleDriveUrl } from '../lib/utils';
 import { auth, googleProvider, ALLOWED_ADMIN_EMAILS } from '../firebase';
@@ -44,9 +44,7 @@ import {
   Edit3,
   Calendar,
   PhoneCall,
-  Clock,
-  MousePointerClick,
-  Link
+  Clock
 } from 'lucide-react';
 
 export const GPU_OPTIONS = [
@@ -388,7 +386,43 @@ export default function AdminPanel({
   };
 
   // Tab state: 'inventory' | 'add' | 'sold' | 'reservations'
-  const [activeTab, setActiveTab] = useState<'inventory' | 'add' | 'sold' | 'reservations'>('inventory');
+  const ADD_DRAFT_KEY = 'rw_admin_add_laptop_draft';
+  const EDIT_DRAFT_KEY = 'rw_admin_edit_laptop_draft';
+  const TAB_DRAFT_KEY = 'rw_admin_active_tab';
+
+  const getInitialAddDraft = () => {
+    try {
+      const saved = sessionStorage.getItem(ADD_DRAFT_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Error parsing add draft:', e);
+    }
+    return null;
+  };
+
+  const getInitialEditDraft = () => {
+    try {
+      const saved = sessionStorage.getItem(EDIT_DRAFT_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Error parsing edit draft:', e);
+    }
+    return null;
+  };
+
+  const initialAddDraft = getInitialAddDraft();
+  const initialEditDraft = getInitialEditDraft();
+
+  const [activeTab, setActiveTab] = useState<'inventory' | 'add' | 'sold' | 'reservations'>(() => {
+    try {
+      const savedTab = sessionStorage.getItem(TAB_DRAFT_KEY);
+      if (savedTab && ['inventory', 'add', 'sold', 'reservations'].includes(savedTab)) {
+        return savedTab as any;
+      }
+    } catch (e) {}
+    return initialAddDraft ? 'add' : 'inventory';
+  });
+
   const [reservations, setReservations] = useState<any[]>([]);
 
   useEffect(() => {
@@ -398,24 +432,24 @@ export default function AdminPanel({
     return () => unsubscribe();
   }, []);
 
-  // New Laptop Form State
-  const [formName, setFormName] = useState('');
-  const [formBrand, setFormBrand] = useState('Apple');
-  const [formPrice, setFormPrice] = useState(600);
-  const [formOriginalPrice, setFormOriginalPrice] = useState(1200);
-  const [formCondition, setFormCondition] = useState<LaptopCondition>('Very Clean');
-  const [formBatteryHealth, setFormBatteryHealth] = useState(90);
-  const [formBatteryNote, setFormBatteryNote] = useState('90% Health • Checked & Excellent');
-  const [formCpu, setFormCpu] = useState('');
-  const [formRam, setFormRam] = useState('16GB');
-  const [formStorage, setFormStorage] = useState('512GB');
-  const [formStorageType, setFormStorageType] = useState('SSD');
-  const [formScreen, setFormScreen] = useState('14" Retina Display');
-  const [formGraphics, setFormGraphics] = useState('Intel Iris Xe Graphics');
-  const [formImages, setFormImages] = useState<string[]>([]);
-  const [imageSourceMode, setImageSourceMode] = useState<'file' | 'drive'>('file');
+  // New Laptop Form State (Restored from draft if available)
+  const [formName, setFormName] = useState(initialAddDraft?.formName ?? '');
+  const [formBrand, setFormBrand] = useState(initialAddDraft?.formBrand ?? 'Apple');
+  const [formPrice, setFormPrice] = useState(initialAddDraft?.formPrice ?? 600);
+  const [formOriginalPrice, setFormOriginalPrice] = useState(initialAddDraft?.formOriginalPrice ?? 1200);
+  const [formCondition, setFormCondition] = useState<LaptopCondition>(initialAddDraft?.formCondition ?? 'Very Clean');
+  const [formBatteryHealth, setFormBatteryHealth] = useState(initialAddDraft?.formBatteryHealth ?? 90);
+  const [formBatteryNote, setFormBatteryNote] = useState(initialAddDraft?.formBatteryNote ?? '90% Health • Checked & Excellent');
+  const [formCpu, setFormCpu] = useState(initialAddDraft?.formCpu ?? '');
+  const [formRam, setFormRam] = useState(initialAddDraft?.formRam ?? '16GB');
+  const [formStorage, setFormStorage] = useState(initialAddDraft?.formStorage ?? '512GB');
+  const [formStorageType, setFormStorageType] = useState(initialAddDraft?.formStorageType ?? 'SSD');
+  const [formScreen, setFormScreen] = useState(initialAddDraft?.formScreen ?? '14" Retina Display');
+  const [formGraphics, setFormGraphics] = useState(initialAddDraft?.formGraphics ?? 'Intel Iris Xe Graphics');
+  const [formImages, setFormImages] = useState<string[]>(initialAddDraft?.formImages ?? []);
+  const [imageSourceMode, setImageSourceMode] = useState<'file' | 'drive'>(initialAddDraft?.imageSourceMode ?? 'file');
   const [fileName, setFileName] = useState<string>('');
-  const [driveLinkInput, setDriveLinkInput] = useState<string>('');
+  const [driveLinkInput, setDriveLinkInput] = useState<string>(initialAddDraft?.driveLinkInput ?? '');
 
   const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
 
@@ -532,18 +566,153 @@ export default function AdminPanel({
       return [selected, ...rest];
     });
   };
-  const [formStock, setFormStock] = useState(1);
-  const [formCategory, setFormCategory] = useState<string>('Business / Office Work');
-  const [formDescription, setFormDescription] = useState('');
-  const [formSerial, setFormSerial] = useState('');
-  const [formInspection, setFormInspection] = useState(true);
-  const [formForSale, setFormForSale] = useState(true);
+  const [formStock, setFormStock] = useState(initialAddDraft?.formStock ?? 1);
+  const [formCategory, setFormCategory] = useState<string>(initialAddDraft?.formCategory ?? 'Business / Office Work');
+  const [formDescription, setFormDescription] = useState(initialAddDraft?.formDescription ?? '');
+  const [formSerial, setFormSerial] = useState(initialAddDraft?.formSerial ?? '');
+  const [formInspection, setFormInspection] = useState(initialAddDraft?.formInspection ?? true);
+  const [formForSale, setFormForSale] = useState(initialAddDraft?.formForSale ?? true);
 
-  // Edit Laptop Modal State
-  const [editingLaptop, setEditingLaptop] = useState<Laptop | null>(null);
-  const [editForm, setEditForm] = useState<Partial<Laptop>>({});
-  const [editImages, setEditImages] = useState<string[]>([]);
-  const [editDriveInput, setEditDriveInput] = useState<string>('');
+  // Edit Laptop Modal State (Restored from edit draft if available)
+  const [editingLaptop, setEditingLaptop] = useState<Laptop | null>(initialEditDraft?.editingLaptop ?? null);
+  const [editForm, setEditForm] = useState<Partial<Laptop>>(initialEditDraft?.editForm ?? {});
+  const [editImages, setEditImages] = useState<string[]>(initialEditDraft?.editImages ?? []);
+  const [editDriveInput, setEditDriveInput] = useState<string>(initialEditDraft?.editDriveInput ?? '');
+
+  // Clear Add Draft helper
+  const clearAddDraft = () => {
+    try {
+      sessionStorage.removeItem(ADD_DRAFT_KEY);
+    } catch (e) {}
+    setFormName('');
+    setFormBrand('Apple');
+    setFormPrice(600);
+    setFormOriginalPrice(1200);
+    setFormCondition('Very Clean');
+    setFormBatteryHealth(90);
+    setFormBatteryNote('90% Health • Checked & Excellent');
+    setFormCpu('');
+    setFormRam('16GB');
+    setFormStorage('512GB');
+    setFormStorageType('SSD');
+    setFormScreen('14" Retina Display');
+    setFormGraphics('Intel Iris Xe Graphics');
+    setFormImages([]);
+    setImageSourceMode('file');
+    setFileName('');
+    setDriveLinkInput('');
+    setFormStock(1);
+    setFormCategory('Business / Office Work');
+    setFormDescription('');
+    setFormSerial('');
+    setFormInspection(true);
+    setFormForSale(true);
+  };
+
+  // Clear Edit Draft helper
+  const clearEditDraft = () => {
+    try {
+      sessionStorage.removeItem(EDIT_DRAFT_KEY);
+    } catch (e) {}
+    setEditingLaptop(null);
+    setEditForm({});
+    setEditImages([]);
+    setEditDriveInput('');
+  };
+
+  // Sync activeTab to sessionStorage
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(TAB_DRAFT_KEY, activeTab);
+    } catch (e) {}
+  }, [activeTab]);
+
+  // Sync Add Laptop Form Draft to sessionStorage
+  useEffect(() => {
+    const hasUserInputs =
+      formName.trim() !== '' ||
+      formCpu.trim() !== '' ||
+      formSerial.trim() !== '' ||
+      formDescription.trim() !== '' ||
+      driveLinkInput.trim() !== '' ||
+      formImages.length > 0;
+
+    if (hasUserInputs) {
+      const draft = {
+        formName,
+        formBrand,
+        formPrice,
+        formOriginalPrice,
+        formCondition,
+        formBatteryHealth,
+        formBatteryNote,
+        formCpu,
+        formRam,
+        formStorage,
+        formStorageType,
+        formScreen,
+        formGraphics,
+        formImages,
+        imageSourceMode,
+        driveLinkInput,
+        formStock,
+        formCategory,
+        formDescription,
+        formSerial,
+        formInspection,
+        formForSale
+      };
+      try {
+        sessionStorage.setItem(ADD_DRAFT_KEY, JSON.stringify(draft));
+      } catch (e) {}
+    } else {
+      try {
+        sessionStorage.removeItem(ADD_DRAFT_KEY);
+      } catch (e) {}
+    }
+  }, [
+    formName,
+    formBrand,
+    formPrice,
+    formOriginalPrice,
+    formCondition,
+    formBatteryHealth,
+    formBatteryNote,
+    formCpu,
+    formRam,
+    formStorage,
+    formStorageType,
+    formScreen,
+    formGraphics,
+    formImages,
+    imageSourceMode,
+    driveLinkInput,
+    formStock,
+    formCategory,
+    formDescription,
+    formSerial,
+    formInspection,
+    formForSale
+  ]);
+
+  // Sync Edit Laptop Modal Draft to sessionStorage
+  useEffect(() => {
+    if (editingLaptop) {
+      const editDraft = {
+        editingLaptop,
+        editForm,
+        editImages,
+        editDriveInput
+      };
+      try {
+        sessionStorage.setItem(EDIT_DRAFT_KEY, JSON.stringify(editDraft));
+      } catch (e) {}
+    } else {
+      try {
+        sessionStorage.removeItem(EDIT_DRAFT_KEY);
+      } catch (e) {}
+    }
+  }, [editingLaptop, editForm, editImages, editDriveInput]);
 
   const handleStartEdit = (laptop: Laptop) => {
     setEditingLaptop(laptop);
@@ -700,7 +869,7 @@ export default function AdminPanel({
       const updatedList = laptops.map((l) => (l.id === updatedLaptop.id ? updatedLaptop : l));
       onUpdateLaptops(updatedList);
       triggerNotification(`Updated & synced ${updatedLaptop.name} Cloudinary images in Firestore!`);
-      setEditingLaptop(null);
+      clearEditDraft();
     } catch (err) {
       console.error('Error updating laptop:', err);
       triggerNotification('Failed to update laptop in database.');
@@ -802,15 +971,8 @@ export default function AdminPanel({
       onUpdateLaptops(updated);
       triggerNotification(`Cloudinary images stored in database & listing launched: ${formName}`);
       
-      // Reset Form Fields
-      setFormName('');
-      setFormCpu('');
-      setFormSerial('');
-      setFormDescription('');
-      setFormImages([]);
-      setFileName('');
-      setDriveLinkInput('');
-      setFormStock(1);
+      // Reset Form Fields & Clear Draft
+      clearAddDraft();
       setActiveTab('inventory');
     } catch (error) {
       console.error('Error storing laptop in database:', error);
@@ -857,14 +1019,6 @@ export default function AdminPanel({
       return laptop;
     });
     onUpdateLaptops(updated);
-  };
-
-  // Copy laptop listing link & track click
-  const handleCopyLaptopLink = (laptop: Laptop) => {
-    const link = `${window.location.origin}${window.location.pathname}?laptop=${laptop.id}`;
-    navigator.clipboard.writeText(link);
-    trackLaptopClick(laptop.id);
-    triggerNotification(`Listing direct link copied for ${laptop.name}! (+1 Click Tracked)`);
   };
 
   if (!isLoggedIn) {
@@ -1129,7 +1283,7 @@ export default function AdminPanel({
           )}
 
         {/* Dashboard Quick Summary Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white border border-[#E5E5E5] p-3.5 shadow-xs">
             <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Total Active Inventory</span>
             <span className="font-display font-black text-2xl text-[#111111] mt-1 block">{laptops.length}</span>
@@ -1151,15 +1305,6 @@ export default function AdminPanel({
               <Eye className="h-4 w-4 text-blue-600" />
             </span>
             <span className="font-sans text-[10px] text-blue-600 mt-0.5 block">Site visitors viewing details</span>
-          </div>
-
-          <div className="bg-white border border-[#E5E5E5] p-3.5 shadow-xs">
-            <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Direct Link Clicks</span>
-            <span className="font-display font-black text-2xl text-[#111111] mt-1 block flex items-center space-x-1.5">
-              <span>{laptops.reduce((acc, l) => acc + (l.clickCount || 0), 0) + soldLaptops.reduce((acc, l) => acc + (l.clickCount || 0), 0)}</span>
-              <MousePointerClick className="h-4 w-4 text-[#FF3B30]" />
-            </span>
-            <span className="font-sans text-[10px] text-emerald-600 mt-0.5 block">Shared link URL visits</span>
           </div>
 
           <div className="bg-white border border-[#E5E5E5] p-3.5 shadow-xs">
@@ -1249,7 +1394,6 @@ export default function AdminPanel({
                     <th className="p-4 font-bold">Price</th>
                     <th className="p-4 font-bold">Stock Remaining</th>
                     <th className="p-4 font-bold">Catalog Views</th>
-                    <th className="p-4 font-bold">Link Clicks</th>
                     <th className="p-4 font-bold">Listing Status</th>
                     <th className="p-4 font-bold text-right">Actions</th>
                   </tr>
@@ -1323,22 +1467,6 @@ export default function AdminPanel({
                         </div>
                       </td>
                       <td className="p-4">
-                        <div className="flex items-center space-x-2">
-                          <div className="flex items-center space-x-1.5 bg-neutral-100 border border-[#E5E5E5] px-2.5 py-1 text-xs font-mono font-bold text-[#111111]">
-                            <MousePointerClick className="h-3.5 w-3.5 text-[#FF3B30]" />
-                            <span>{laptop.clickCount || 0}</span>
-                            <span className="text-[10px] text-neutral-500 font-sans font-normal">clicks</span>
-                          </div>
-                          <button
-                            onClick={() => handleCopyLaptopLink(laptop)}
-                            className="p-1.5 text-neutral-600 hover:text-[#FF3B30] hover:bg-neutral-100 border border-[#E5E5E5] transition-colors cursor-pointer"
-                            title="Copy listing direct link & track click"
-                          >
-                            <Link className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                      <td className="p-4">
                         <button
                           onClick={() => handleToggleForSale(laptop.id)}
                           className="flex items-center space-x-2 text-xs font-medium cursor-pointer focus:outline-hidden"
@@ -1378,7 +1506,7 @@ export default function AdminPanel({
                   ))}
                   {laptops.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-[#6B6B6B] font-sans">
+                      <td colSpan={7} className="p-8 text-center text-[#6B6B6B] font-sans">
                         No product listings found. Click "Add Product Listing" to insert your first workstation.
                       </td>
                     </tr>
@@ -1392,13 +1520,31 @@ export default function AdminPanel({
         {/* TAB 2: Add New Workstation Form */}
         {activeTab === 'add' && (
           <form onSubmit={handleAddLaptop} className="bg-white border border-[#E5E5E5] p-6 sm:p-8 space-y-6">
-            <div>
-              <h2 className="font-display font-bold text-sm text-[#111111]">
-                Launch New Laptop Listing
-              </h2>
-              <p className="font-sans text-xs text-[#6B6B6B] mt-1">
-                Enter precise physical condition details, diagnostic outputs, serial codes and detailed specifications.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[#E5E5E5] pb-4">
+              <div>
+                <h2 className="font-display font-bold text-sm text-[#111111]">
+                  Launch New Laptop Listing
+                </h2>
+                <p className="font-sans text-xs text-[#6B6B6B] mt-1">
+                  Enter precise physical condition details, diagnostic outputs, serial codes and detailed specifications.
+                </p>
+              </div>
+
+              {(formName || formCpu || formSerial || formDescription || driveLinkInput || formImages.length > 0) && (
+                <div className="bg-amber-50 border border-amber-200 px-3 py-2 flex items-center justify-between sm:justify-end space-x-3 text-xs text-amber-900 shrink-0">
+                  <div className="flex items-center space-x-1.5 font-mono text-[11px]">
+                    <Clock className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                    <span>Draft auto-saved</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearAddDraft}
+                    className="text-amber-800 hover:text-red-600 font-bold underline text-[11px] cursor-pointer"
+                  >
+                    Discard Draft
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -2033,7 +2179,7 @@ export default function AdminPanel({
               <div className="flex items-center space-x-3">
                 <button
                   type="button"
-                  onClick={() => setEditingLaptop(null)}
+                  onClick={clearEditDraft}
                   className="group flex items-center space-x-2 text-[#111111] hover:text-[#FF3B30] transition-colors cursor-pointer font-sans text-xs font-bold uppercase tracking-wider"
                 >
                   <ArrowLeft className="h-4 w-4 transform group-hover:-translate-x-1 transition-transform" />
@@ -2050,9 +2196,9 @@ export default function AdminPanel({
 
               <button
                 type="button"
-                onClick={() => setEditingLaptop(null)}
+                onClick={clearEditDraft}
                 className="bg-neutral-100 hover:bg-[#FF3B30] text-[#111111] hover:text-white p-2 transition-colors cursor-pointer rounded-xs"
-                title="Close Editor"
+                title="Close Editor & Clear Draft"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -2062,13 +2208,19 @@ export default function AdminPanel({
             <div className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8 bg-white space-y-6">
               
               {/* Header info */}
-                <div className="border-b border-[#E5E5E5] pb-4">
-                  <h2 className="font-display font-bold text-xl text-[#111111]">
-                    {editingLaptop.name}
-                  </h2>
-                  <p className="font-mono text-xs text-neutral-500 mt-1">
-                    S/N: {editingLaptop.serialNumber} • ID: {editingLaptop.id}
-                  </p>
+                <div className="border-b border-[#E5E5E5] pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <h2 className="font-display font-bold text-xl text-[#111111]">
+                      {editingLaptop.name}
+                    </h2>
+                    <p className="font-mono text-xs text-neutral-500 mt-1">
+                      S/N: {editingLaptop.serialNumber} • ID: {editingLaptop.id}
+                    </p>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 px-2.5 py-1 text-xs text-blue-900 flex items-center space-x-1.5 w-fit">
+                    <Clock className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                    <span className="font-mono text-[10px]">Draft auto-saved across app switches</span>
+                  </div>
                 </div>
 
               <form onSubmit={handleSaveEditLaptop} className="space-y-6">
@@ -2413,7 +2565,7 @@ export default function AdminPanel({
                 <div className="flex items-center justify-between pt-4 border-t border-[#E5E5E5]">
                   <button
                     type="button"
-                    onClick={() => setEditingLaptop(null)}
+                    onClick={clearEditDraft}
                     className="px-4 py-2 border border-[#E5E5E5] hover:bg-neutral-100 font-mono text-xs font-bold text-neutral-700 cursor-pointer"
                   >
                     Cancel
