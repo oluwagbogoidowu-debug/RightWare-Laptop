@@ -7,7 +7,10 @@ import {
   subscribeReservations,
   subscribeTestimonials,
   saveTestimonialToFirestore,
-  deleteTestimonialFromFirestore
+  deleteTestimonialFromFirestore,
+  updateTestimonialStatus,
+  subscribeDailyViews,
+  getTodayDateString
 } from '../lib/firebaseService';
 import { uploadToCloudinary } from '../lib/cloudinaryService';
 import { formatNaira, convertGoogleDriveUrl } from '../lib/utils';
@@ -54,7 +57,16 @@ import {
   Clock,
   Quote,
   MessageSquare,
-  Sparkles
+  Sparkles,
+  TrendingUp,
+  BarChart3,
+  Link2,
+  Copy,
+  Check,
+  Layers,
+  Filter,
+  Activity,
+  ArrowUpRight
 } from 'lucide-react';
 
 export const GPU_OPTIONS = [
@@ -423,10 +435,10 @@ export default function AdminPanel({
   const initialAddDraft = getInitialAddDraft();
   const initialEditDraft = getInitialEditDraft();
 
-  const [activeTab, setActiveTab] = useState<'inventory' | 'add' | 'sold' | 'reservations'>(() => {
+  const [activeTab, setActiveTab] = useState<'inventory' | 'add' | 'sold' | 'reservations' | 'daily-views'>(() => {
     try {
       const savedTab = sessionStorage.getItem(TAB_DRAFT_KEY);
-      if (savedTab && ['inventory', 'add', 'sold', 'reservations'].includes(savedTab)) {
+      if (savedTab && ['inventory', 'add', 'sold', 'reservations', 'daily-views'].includes(savedTab)) {
         return savedTab as any;
       }
     } catch (e) {}
@@ -435,6 +447,7 @@ export default function AdminPanel({
 
   const [reservations, setReservations] = useState<any[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [dailyViewsData, setDailyViewsData] = useState<any[]>([]);
 
   useEffect(() => {
     const unsubscribeRes = subscribeReservations((data) => {
@@ -443,11 +456,70 @@ export default function AdminPanel({
     const unsubscribeTesti = subscribeTestimonials((data) => {
       setTestimonials(data);
     });
+    const unsubscribeDaily = subscribeDailyViews((data) => {
+      setDailyViewsData(data);
+    });
     return () => {
       unsubscribeRes();
       unsubscribeTesti();
+      unsubscribeDaily();
     };
   }, []);
+
+  // Daily Link Views Filtering State
+  const [selectedDateRange, setSelectedDateRange] = useState<'all' | 'today' | 'yesterday' | '7days' | '14days' | '30days' | 'custom'>('7days');
+  const [customDateFilter, setCustomDateFilter] = useState<string>('');
+  const [analyticsSearch, setAnalyticsSearch] = useState<string>('');
+  const [copiedLinkLaptopId, setCopiedLinkLaptopId] = useState<string | null>(null);
+
+  // Helper date calculations
+  const todayDateStr = getTodayDateString();
+  const yesterdayDateStr = getTodayDateString(new Date(Date.now() - 86400000));
+
+  const allInventoryAndSold: Laptop[] = [...laptops, ...soldLaptops];
+
+  const getLaptopViewsOnDate = (laptop: Laptop, dateStr: string): number => {
+    return laptop.dailyViews?.[dateStr] || 0;
+  };
+
+  const getLaptopTodayViews = (laptop: Laptop): number => {
+    return getLaptopViewsOnDate(laptop, todayDateStr);
+  };
+
+  // Calculate live today total views
+  const todayTotalViews = allInventoryAndSold.reduce((acc, l) => acc + getLaptopTodayViews(l), 0);
+  const yesterdayTotalViews = allInventoryAndSold.reduce((acc, l) => acc + getLaptopViewsOnDate(l, yesterdayDateStr), 0);
+  const overallTotalViews = allInventoryAndSold.reduce((acc, l) => acc + (l.viewCount || 0), 0);
+
+  // Past N days array helpers
+  const getPastNDays = (daysCount: number) => {
+    const arr: string[] = [];
+    for (let i = 0; i < daysCount; i++) {
+      const d = new Date(Date.now() - i * 86400000);
+      arr.push(getTodayDateString(d));
+    }
+    return arr;
+  };
+
+  const last7DaysArr = getPastNDays(7);
+  const last14DaysArr = getPastNDays(14);
+  const last30DaysArr = getPastNDays(30);
+
+  const last7DaysTotalViews = allInventoryAndSold.reduce((acc, l) => {
+    return acc + last7DaysArr.reduce((sum, d) => sum + getLaptopViewsOnDate(l, d), 0);
+  }, 0);
+
+  const last30DaysTotalViews = allInventoryAndSold.reduce((acc, l) => {
+    return acc + last30DaysArr.reduce((sum, d) => sum + getLaptopViewsOnDate(l, d), 0);
+  }, 0);
+
+  const handleCopyDirectLink = (laptopId: string) => {
+    const url = `${window.location.origin}${window.location.pathname}?laptop=${laptopId}`;
+    navigator.clipboard.writeText(url);
+    setCopiedLinkLaptopId(laptopId);
+    triggerNotification(`Copied share link: ${url}`);
+    setTimeout(() => setCopiedLinkLaptopId(null), 2500);
+  };
 
   // Testimonial Modal & Form State
   const [isTestimonialModalOpen, setIsTestimonialModalOpen] = useState(false);
@@ -460,6 +532,12 @@ export default function AdminPanel({
   const [testiVerified, setTestiVerified] = useState(true);
   const [testiLaptopBought, setTestiLaptopBought] = useState('');
   const [testiSoldLaptopId, setTestiSoldLaptopId] = useState('');
+  const [testiIsLive, setTestiIsLive] = useState(true);
+  const [testiStatus, setTestiStatus] = useState<'approved' | 'pending' | 'hidden'>('approved');
+  const [testiSubmittedByCustomer, setTestiSubmittedByCustomer] = useState(false);
+  const [testiCustomerPhone, setTestiCustomerPhone] = useState('');
+  const [testiCustomerEmail, setTestiCustomerEmail] = useState('');
+  const [testiCreatedAt, setTestiCreatedAt] = useState<number | undefined>(undefined);
 
   // Sold Laptop Review Modal / Inline Editor State
   const [editingSoldLaptop, setEditingSoldLaptop] = useState<Laptop | null>(null);
@@ -478,6 +556,12 @@ export default function AdminPanel({
       setTestiVerified(true);
       setTestiLaptopBought(soldLaptop.name);
       setTestiSoldLaptopId(soldLaptop.id);
+      setTestiIsLive(true);
+      setTestiStatus('approved');
+      setTestiSubmittedByCustomer(false);
+      setTestiCustomerPhone('');
+      setTestiCustomerEmail('');
+      setTestiCreatedAt(Date.now());
     } else {
       setEditingTestimonialId(null);
       setTestiName('');
@@ -488,6 +572,12 @@ export default function AdminPanel({
       setTestiVerified(true);
       setTestiLaptopBought('');
       setTestiSoldLaptopId('');
+      setTestiIsLive(true);
+      setTestiStatus('approved');
+      setTestiSubmittedByCustomer(false);
+      setTestiCustomerPhone('');
+      setTestiCustomerEmail('');
+      setTestiCreatedAt(Date.now());
     }
     setIsTestimonialModalOpen(true);
   };
@@ -502,6 +592,12 @@ export default function AdminPanel({
     setTestiVerified(t.verifiedPurchase);
     setTestiLaptopBought(t.laptopBought);
     setTestiSoldLaptopId(t.soldLaptopId || '');
+    setTestiIsLive(t.isLive !== false && t.status !== 'pending' && t.status !== 'hidden');
+    setTestiStatus(t.status || (t.isLive === false ? 'pending' : 'approved'));
+    setTestiSubmittedByCustomer(!!t.submittedByCustomer);
+    setTestiCustomerPhone(t.customerPhone || '');
+    setTestiCustomerEmail(t.customerEmail || '');
+    setTestiCreatedAt(t.createdAt);
     setIsTestimonialModalOpen(true);
   };
 
@@ -524,6 +620,8 @@ export default function AdminPanel({
       return;
     }
 
+    const finalStatus: 'approved' | 'pending' | 'hidden' = testiIsLive ? 'approved' : (testiStatus === 'pending' ? 'pending' : 'hidden');
+
     const newOrUpdatedTestimonial: Testimonial = {
       id: editingTestimonialId || `testimonial_${Date.now()}`,
       name: testiName.trim(),
@@ -534,6 +632,12 @@ export default function AdminPanel({
       verifiedPurchase: testiVerified,
       laptopBought: testiLaptopBought.trim() || 'Workstation Laptop',
       soldLaptopId: testiSoldLaptopId || undefined,
+      isLive: testiIsLive,
+      status: finalStatus,
+      submittedByCustomer: testiSubmittedByCustomer,
+      customerPhone: testiCustomerPhone.trim() || undefined,
+      customerEmail: testiCustomerEmail.trim() || undefined,
+      createdAt: testiCreatedAt || Date.now()
     };
 
     try {
@@ -554,7 +658,9 @@ export default function AdminPanel({
 
       setNotification({
         type: 'success',
-        message: editingTestimonialId ? 'Testimonial updated & live on homepage!' : 'New testimonial published to homepage!'
+        message: editingTestimonialId 
+          ? (testiIsLive ? 'Testimonial updated & live on homepage!' : 'Testimonial updated and saved in archive.') 
+          : (testiIsLive ? 'New testimonial published to homepage!' : 'Testimonial saved in archive.')
       });
       setIsTestimonialModalOpen(false);
     } catch (err: any) {
@@ -563,11 +669,41 @@ export default function AdminPanel({
     }
   };
 
+  // Quick Approve and Make Live from Pending Queue
+  const handleApproveAndMakeLive = async (testimonial: Testimonial) => {
+    try {
+      await updateTestimonialStatus(testimonial.id, true, 'approved');
+      triggerNotification(`Review by ${testimonial.name} approved & published LIVE on homepage!`);
+    } catch (err: any) {
+      console.error('Error approving review:', err);
+      setNotification({ type: 'error', message: 'Failed to approve review: ' + err.message });
+    }
+  };
+
+  // Quick Toggle Live / Offline
+  const handleToggleTestimonialLiveStatus = async (testimonial: Testimonial) => {
+    const currentlyLive = testimonial.isLive !== false && testimonial.status !== 'pending' && testimonial.status !== 'hidden';
+    const willBeLive = !currentlyLive;
+    const newStatus = willBeLive ? 'approved' : 'hidden';
+
+    try {
+      await updateTestimonialStatus(testimonial.id, willBeLive, newStatus);
+      triggerNotification(
+        willBeLive 
+          ? `Testimonial by ${testimonial.name} is now LIVE on homepage!` 
+          : `Testimonial by ${testimonial.name} taken offline (hidden).`
+      );
+    } catch (err: any) {
+      console.error('Error toggling live status:', err);
+      setNotification({ type: 'error', message: 'Failed to update status: ' + err.message });
+    }
+  };
+
   const handleDeleteTestimonialClick = async (testimonialId: string) => {
-    if (!window.confirm('Are you sure you want to remove this testimonial from the homepage?')) return;
+    if (!window.confirm('Are you sure you want to delete this testimonial?')) return;
     try {
       await deleteTestimonialFromFirestore(testimonialId);
-      setNotification({ type: 'success', message: 'Testimonial removed from homepage.' });
+      setNotification({ type: 'success', message: 'Testimonial deleted from database.' });
     } catch (err: any) {
       console.error('Error deleting testimonial:', err);
       setNotification({ type: 'error', message: 'Failed to remove testimonial.' });
@@ -1453,9 +1589,9 @@ export default function AdminPanel({
           )}
 
         {/* Dashboard Quick Summary Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 mb-8">
           <div className="bg-white border border-[#E5E5E5] p-3.5 shadow-xs">
-            <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Total Active Inventory</span>
+            <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Active Inventory</span>
             <span className="font-display font-black text-2xl text-[#111111] mt-1 block">{laptops.length}</span>
             <span className="font-sans text-[10px] text-[#6B6B6B] mt-0.5 block">Verified & cataloged units</span>
           </div>
@@ -1468,24 +1604,41 @@ export default function AdminPanel({
             <span className="font-sans text-[10px] text-emerald-600 mt-0.5 block">Listed on client catalog</span>
           </div>
 
-          <div className="bg-white border border-[#E5E5E5] p-3.5 shadow-xs">
-            <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Total Catalog Views</span>
-            <span className="font-display font-black text-2xl text-[#111111] mt-1 block flex items-center space-x-1.5">
-              <span>{laptops.reduce((acc, l) => acc + (l.viewCount || 0), 0) + soldLaptops.reduce((acc, l) => acc + (l.viewCount || 0), 0)}</span>
-              <Eye className="h-4 w-4 text-blue-600" />
+          <div className="bg-white border border-emerald-200 bg-emerald-50/20 p-3.5 shadow-xs relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[9px] text-emerald-700 font-bold uppercase tracking-wider block">Today's Link Views</span>
+              <span className="font-mono text-[8px] bg-emerald-100 text-emerald-800 font-black px-1.5 py-0.5 border border-emerald-300 flex items-center space-x-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>LIVE TODAY</span>
+              </span>
+            </div>
+            <span className="font-display font-black text-2xl text-emerald-900 mt-1 block flex items-center space-x-1.5">
+              <span>{todayTotalViews}</span>
+              <TrendingUp className="h-4 w-4 text-emerald-600" />
             </span>
-            <span className="font-sans text-[10px] text-blue-600 mt-0.5 block">Site visitors viewing details</span>
+            <span className="font-sans text-[10px] text-emerald-700 font-medium mt-0.5 block">
+              {todayTotalViews === 1 ? '1 visit logged today' : `${todayTotalViews} visits logged today`}
+            </span>
           </div>
 
           <div className="bg-white border border-[#E5E5E5] p-3.5 shadow-xs">
+            <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Overall Total Views</span>
+            <span className="font-display font-black text-2xl text-[#111111] mt-1 block flex items-center space-x-1.5">
+              <span>{overallTotalViews}</span>
+              <Eye className="h-4 w-4 text-blue-600" />
+            </span>
+            <span className="font-sans text-[10px] text-blue-600 mt-0.5 block">All-time direct & catalog visits</span>
+          </div>
+
+          <div className="bg-white border border-[#E5E5E5] p-3.5 shadow-xs col-span-2 sm:col-span-1">
             <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Total Sold Units</span>
             <span className="font-display font-black text-2xl text-neutral-500 mt-1 block">{soldLaptops.length}</span>
             <span className="font-sans text-[10px] text-[#6B6B6B] mt-0.5 block">Archived client reviews</span>
           </div>
         </div>
 
-        {/* Workspace Workspace Tabs Navigation */}
-        <div className="border-b border-[#E5E5E5] flex space-x-1.5 mb-6">
+        {/* Workspace Tabs Navigation */}
+        <div className="border-b border-[#E5E5E5] flex flex-wrap gap-1 mb-6">
           <button
             onClick={() => setActiveTab('inventory')}
             className={`px-4 py-3 font-sans text-xs font-bold border-b-2 transition-all cursor-pointer ${
@@ -1497,6 +1650,24 @@ export default function AdminPanel({
             <span className="flex items-center space-x-2">
               <Package className="h-4 w-4" />
               <span>Review Listings ({laptops.length})</span>
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('daily-views')}
+            className={`px-4 py-3 font-sans text-xs font-bold border-b-2 transition-all cursor-pointer ${
+              activeTab === 'daily-views' 
+                ? 'border-[#FF3B30] text-[#111111]' 
+                : 'border-transparent text-[#6B6B6B] hover:text-[#111111]'
+            }`}
+          >
+            <span className="flex items-center space-x-2">
+              <TrendingUp className={`h-4 w-4 ${activeTab === 'daily-views' ? 'text-[#FF3B30]' : 'text-neutral-500'}`} />
+              <span>Link Views by Day</span>
+              <span className="font-mono text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 border border-emerald-300 flex items-center space-x-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>{todayTotalViews} today</span>
+              </span>
             </span>
           </button>
 
@@ -1524,7 +1695,13 @@ export default function AdminPanel({
           >
             <span className="flex items-center space-x-2">
               <Database className="h-4 w-4" />
-              <span>Archive & Feedback ({soldLaptops.length})</span>
+              <span>Archive & Feedback</span>
+              {testimonials.filter(t => t.status === 'pending' || (t.submittedByCustomer && t.isLive === false && t.status !== 'hidden')).length > 0 && (
+                <span className="bg-amber-500 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse flex items-center space-x-0.5">
+                  <span>⚡</span>
+                  <span>{testimonials.filter(t => t.status === 'pending' || (t.submittedByCustomer && t.isLive === false && t.status !== 'hidden')).length} new</span>
+                </span>
+              )}
             </span>
           </button>
 
@@ -1563,7 +1740,7 @@ export default function AdminPanel({
                     <th className="p-4 font-bold">Spec Summary</th>
                     <th className="p-4 font-bold">Price</th>
                     <th className="p-4 font-bold">Stock Remaining</th>
-                    <th className="p-4 font-bold">Catalog Views</th>
+                    <th className="p-4 font-bold">Link Views (Today / Total)</th>
                     <th className="p-4 font-bold">Listing Status</th>
                     <th className="p-4 font-bold text-right">Actions</th>
                   </tr>
@@ -1630,10 +1807,45 @@ export default function AdminPanel({
                         </div>
                       </td>
                       <td className="p-4">
-                        <div className="flex items-center space-x-1.5 bg-blue-50 border border-blue-200 px-2.5 py-1 text-xs font-mono font-bold text-blue-800 w-fit">
-                          <Eye className="h-3.5 w-3.5 text-blue-600" />
-                          <span>{laptop.viewCount || 0}</span>
-                          <span className="text-[10px] text-blue-600 font-sans font-normal">views</span>
+                        <div className="space-y-1.5">
+                          {/* Today's Views Badge */}
+                          <div className="flex items-center space-x-1.5">
+                            <span className={`px-2 py-0.5 text-[10px] font-mono font-bold flex items-center space-x-1 border ${
+                              getLaptopTodayViews(laptop) > 0
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                : 'bg-neutral-100 text-neutral-500 border-neutral-200'
+                            }`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${getLaptopTodayViews(laptop) > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-400'}`} />
+                              <span>{getLaptopTodayViews(laptop)} today</span>
+                            </span>
+                          </div>
+
+                          {/* All-time Total Views */}
+                          <div className="flex items-center space-x-1 font-mono text-[11px] text-neutral-600">
+                            <Eye className="h-3 w-3 text-blue-600" />
+                            <span className="font-bold text-[#111111]">{laptop.viewCount || 0}</span>
+                            <span className="text-[10px] text-neutral-400">total</span>
+                          </div>
+
+                          {/* Direct Share Link Action */}
+                          <button
+                            type="button"
+                            onClick={() => handleCopyDirectLink(laptop.id)}
+                            className="text-[10px] text-blue-600 hover:text-blue-800 font-medium flex items-center space-x-1 hover:underline cursor-pointer pt-0.5"
+                            title="Copy shareable direct link to this laptop"
+                          >
+                            {copiedLinkLaptopId === laptop.id ? (
+                              <>
+                                <Check className="h-3 w-3 text-emerald-600" />
+                                <span className="text-emerald-600 font-bold">Link Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Link2 className="h-3 w-3" />
+                                <span>Copy Link</span>
+                              </>
+                            )}
+                          </button>
                         </div>
                       </td>
                       <td className="p-4">
@@ -2207,214 +2419,436 @@ export default function AdminPanel({
           </form>
         )}
 
-        {/* TAB 3: SOLD Products, Feedbacks list & Homepage Testimonials Manager */}
-        {activeTab === 'sold' && (
-          <div className="space-y-8">
-            {/* 1. HOMEPAGE TESTIMONIALS MANAGER */}
-            <div className="bg-white border border-[#E5E5E5] overflow-hidden shadow-2xs">
-              <div className="p-5 border-b border-[#E5E5E5] bg-[#FAF9F9] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <Star className="h-4 w-4 text-[#FF3B30] fill-[#FF3B30]" />
-                    <h2 className="font-display font-bold text-sm text-[#111111]">
-                      Homepage Customer Testimonials ({testimonials.length})
-                    </h2>
-                    <span className="font-mono text-[9px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 border border-emerald-300">
-                      LIVE ON HOMEPAGE
-                    </span>
+        {/* TAB 3: SOLD Products, Feedbacks list & Customer Review Moderation */}
+        {activeTab === 'sold' && (() => {
+          const pendingReviews = testimonials.filter(
+            t => t.status === 'pending' || (t.submittedByCustomer && t.isLive === false && t.status !== 'hidden')
+          );
+          const liveTestimonials = testimonials.filter(
+            t => t.isLive !== false && t.status !== 'pending' && t.status !== 'hidden'
+          );
+          const hiddenTestimonials = testimonials.filter(
+            t => t.status === 'hidden' || (t.isLive === false && t.status !== 'pending' && !t.submittedByCustomer)
+          );
+
+          return (
+            <div className="space-y-8">
+              {/* 1. CUSTOMER SUBMISSIONS MODERATION QUEUE */}
+              <div className="bg-white border-2 border-amber-300 overflow-hidden shadow-xs">
+                <div className="p-5 border-b border-amber-200 bg-amber-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center space-x-2.5">
+                      <span className="bg-amber-500 text-white font-mono text-[10px] font-black px-2 py-0.5 uppercase tracking-wider flex items-center space-x-1">
+                        <span>⚡ Moderation Queue</span>
+                      </span>
+                      <h2 className="font-display font-bold text-sm text-[#111111]">
+                        Customer Submissions Awaiting Review ({pendingReviews.length})
+                      </h2>
+                    </div>
+                    <p className="font-sans text-xs text-neutral-600 mt-1">
+                      Reviews submitted by buyers on the public storefront. Review, verify, edit details, or publish them live to the homepage.
+                    </p>
                   </div>
-                  <p className="font-sans text-xs text-[#6B6B6B] mt-1">
-                    Add, edit, or remove customer stories displayed on the storefront. Connect them directly to sold laptop records.
-                  </p>
+
+                  {pendingReviews.length > 0 && (
+                    <span className="font-mono text-[11px] bg-amber-100 text-amber-900 border border-amber-300 font-bold px-3 py-1 self-start sm:self-auto">
+                      {pendingReviews.length} {pendingReviews.length === 1 ? 'review' : 'reviews'} need attention
+                    </span>
+                  )}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleOpenAddTestimonial()}
-                  className="bg-[#FF3B30] hover:bg-[#D32F2F] text-white font-sans text-xs font-bold px-4 py-2.5 transition-colors cursor-pointer flex items-center space-x-1.5 shrink-0"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Add Homepage Testimonial</span>
-                </button>
-              </div>
+                <div className="p-5 bg-neutral-50/40">
+                  {pendingReviews.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {pendingReviews.map((t) => (
+                        <div key={t.id} className="bg-white border-2 border-amber-300 p-4 shadow-sm flex flex-col justify-between space-y-4 relative">
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center space-x-2">
+                                <span className="bg-amber-100 text-amber-900 font-mono text-[9px] font-black px-2 py-0.5 border border-amber-300 uppercase">
+                                  Pending Approval
+                                </span>
+                                {t.createdAt && (
+                                  <span className="font-mono text-[9px] text-neutral-400">
+                                    {new Date(t.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                {[...Array(t.rating || 5)].map((_, i) => (
+                                  <Star key={i} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                                ))}
+                              </div>
+                            </div>
 
-              {/* Grid of Homepage Testimonials */}
-              <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-neutral-50/50">
-                {testimonials.map((t) => {
-                  const linkedSold = t.soldLaptopId ? soldLaptops.find(s => s.id === t.soldLaptopId) : null;
-                  return (
-                    <div key={t.id} className="bg-white border border-[#E5E5E5] p-4 flex flex-col justify-between space-y-4 shadow-xs hover:border-neutral-300 transition-all">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-1">
-                            {[...Array(t.rating || 5)].map((_, i) => (
-                              <Star key={i} className="h-3.5 w-3.5 fill-[#FF3B30] text-[#FF3B30]" />
-                            ))}
-                          </div>
-                          {t.verifiedPurchase && (
-                            <span className="font-mono text-[9px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 flex items-center space-x-1">
-                              <ShieldCheck className="h-3 w-3" />
-                              <span>Verified Buyer</span>
-                            </span>
-                          )}
-                        </div>
+                            {/* Review Quote */}
+                            <p className="font-sans text-xs italic text-[#111111] bg-amber-50/50 p-3 border border-dashed border-amber-200 leading-relaxed font-medium">
+                              "{t.quote}"
+                            </p>
 
-                        <p className="font-sans text-xs italic text-[#222222] bg-neutral-50 p-2.5 border border-dashed border-[#E5E5E5] leading-relaxed">
-                          "{t.quote}"
-                        </p>
-                      </div>
+                            {/* Customer Profile & Laptop Info */}
+                            <div className="space-y-1.5 pt-1">
+                              <div className="flex items-center space-x-2">
+                                <img
+                                  src={t.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'}
+                                  alt={t.name}
+                                  className="w-8 h-8 rounded-full object-cover border border-[#E5E5E5] shrink-0"
+                                />
+                                <div>
+                                  <h4 className="font-display font-bold text-xs text-[#111111]">{t.name}</h4>
+                                  <p className="font-sans text-[10px] text-neutral-500">{t.role || 'Verified Customer'}</p>
+                                </div>
+                              </div>
 
-                      <div className="pt-3 border-t border-[#F0F0F0] space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2.5 min-w-0 flex-1">
-                            <img src={t.avatar} alt={t.name} className="w-8 h-8 rounded-full object-cover border border-[#E5E5E5] filter grayscale shrink-0" />
-                            <div className="min-w-0">
-                              <h4 className="font-display font-bold text-xs text-[#111111] truncate">{t.name}</h4>
-                              <p className="font-sans text-[10px] text-[#6B6B6B] truncate">{t.role}</p>
+                              <div className="font-mono text-[10px] text-[#FF3B30] font-bold flex items-center space-x-1 pt-1">
+                                <Package className="h-3.5 w-3.5 shrink-0" />
+                                <span>Purchased: {t.laptopBought}</span>
+                              </div>
+
+                              {/* Customer Contact Details (Private to Admin) */}
+                              {(t.customerPhone || t.customerEmail) && (
+                                <div className="bg-neutral-100 p-2 border border-neutral-200 font-mono text-[9px] text-neutral-700 space-y-0.5 mt-2">
+                                  <span className="font-bold text-neutral-900 block uppercase">Private Contact info:</span>
+                                  {t.customerPhone && <div>📞 Phone: <span className="font-bold text-[#111111]">{t.customerPhone}</span></div>}
+                                  {t.customerEmail && <div>✉️ Email: <span className="font-bold text-[#111111]">{t.customerEmail}</span></div>}
+                                </div>
+                              )}
                             </div>
                           </div>
 
-                          <div className="flex items-center space-x-1 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditTestimonial(t)}
-                              className="p-1.5 text-neutral-600 hover:text-[#111111] hover:bg-neutral-100 transition-colors cursor-pointer"
-                              title="Edit Testimonial"
-                            >
-                              <Edit3 className="h-3.5 w-3.5" />
-                            </button>
+                          {/* Action Buttons */}
+                          <div className="pt-3 border-t border-neutral-200 flex flex-wrap items-center justify-between gap-2">
                             <button
                               type="button"
                               onClick={() => handleDeleteTestimonialClick(t.id)}
-                              className="p-1.5 text-neutral-400 hover:text-[#FF3B30] hover:bg-rose-50 transition-colors cursor-pointer"
-                              title="Remove Testimonial"
+                              className="px-2.5 py-1.5 text-rose-600 hover:bg-rose-50 font-sans text-xs font-bold transition-colors cursor-pointer flex items-center space-x-1"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
+                              <span>Reject / Delete</span>
                             </button>
+
+                            <div className="flex items-center space-x-2">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditTestimonial(t)}
+                                className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-[#111111] font-sans text-xs font-bold transition-colors cursor-pointer flex items-center space-x-1 border border-neutral-300"
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
+                                <span>Review & Edit</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleApproveAndMakeLive(t)}
+                                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-sans text-xs font-bold transition-colors cursor-pointer flex items-center space-x-1 shadow-2xs"
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                                <span>Approve & Go Live</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
-
-                        <div className="font-mono text-[9px] text-[#FF3B30] uppercase tracking-wider flex items-center space-x-1">
-                          <Package className="h-3 w-3 shrink-0" />
-                          <span className="truncate">Bought: {t.laptopBought}</span>
-                        </div>
-
-                        {linkedSold && (
-                          <span className="font-mono text-[9px] text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 block truncate">
-                            Linked Sold Laptop: S/N {linkedSold.serialNumber}
-                          </span>
-                        )}
-                      </div>
+                      ))}
                     </div>
-                  );
-                })}
+                  ) : (
+                    <div className="p-6 text-center text-neutral-500 font-sans bg-white border border-neutral-200">
+                      <CheckCircle className="h-6 w-6 text-emerald-500 mx-auto mb-2" />
+                      <p className="font-bold text-xs text-neutral-800">All customer submissions are up to date.</p>
+                      <p className="text-[11px] text-neutral-500 mt-0.5">
+                        New reviews submitted by customers on the storefront will appear here for verification before publishing.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-                {testimonials.length === 0 && (
-                  <div className="col-span-full p-8 text-center text-[#6B6B6B] font-sans">
-                    <p className="font-bold text-sm text-neutral-700">No testimonials published yet.</p>
-                    <p className="text-xs text-neutral-500 mt-1">Click "Add Homepage Testimonial" above or promote a sold laptop review from the archive below.</p>
+              {/* 2. LIVE HOMEPAGE TESTIMONIALS MANAGER */}
+              <div className="bg-white border border-[#E5E5E5] overflow-hidden shadow-2xs">
+                <div className="p-5 border-b border-[#E5E5E5] bg-[#FAF9F9] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <Star className="h-4 w-4 text-[#FF3B30] fill-[#FF3B30]" />
+                      <h2 className="font-display font-bold text-sm text-[#111111]">
+                        Live Homepage Customer Testimonials ({liveTestimonials.length})
+                      </h2>
+                      <span className="font-mono text-[9px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 border border-emerald-300">
+                        LIVE ON HOMEPAGE
+                      </span>
+                    </div>
+                    <p className="font-sans text-xs text-[#6B6B6B] mt-1">
+                      These reviews are currently visible on the public homepage. You can edit text, link to sold laptops, take offline, or delete anytime.
+                    </p>
                   </div>
-                )}
-              </div>
-            </div>
 
-            {/* 2. ARCHIVED SALES & CLIENT REVIEWS */}
-            <div className="bg-white border border-[#E5E5E5] overflow-hidden shadow-2xs">
-              <div className="p-5 border-b border-[#E5E5E5] bg-[#FAF9F9]">
-                <h2 className="font-display font-bold text-sm text-[#111111]">
-                  Archived Sales & Client Reviews ({soldLaptops.length})
-                </h2>
-                <p className="font-sans text-xs text-[#6B6B6B] mt-1">
-                  Completed sales archive. Update buyer review details or publish any sold unit directly as a homepage testimonial.
-                </p>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenAddTestimonial()}
+                    className="bg-[#FF3B30] hover:bg-[#D32F2F] text-white font-sans text-xs font-bold px-4 py-2.5 transition-colors cursor-pointer flex items-center space-x-1.5 shrink-0"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Add Homepage Testimonial</span>
+                  </button>
+                </div>
 
-              <div className="divide-y divide-[#E5E5E5]">
-                {soldLaptops.map((laptop) => {
-                  const existingTestimonial = testimonials.find(
-                    t => t.soldLaptopId === laptop.id || (t.laptopBought && t.laptopBought.toLowerCase().trim() === laptop.name.toLowerCase().trim())
-                  );
-
-                  return (
-                    <div key={laptop.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-neutral-50/50 transition-colors">
-                      <div className="flex items-start space-x-4 flex-1">
-                        <img 
-                          src={laptop.image} 
-                          alt={laptop.name} 
-                          className="w-16 h-12 object-cover border border-[#E5E5E5] flex-shrink-0 filter grayscale"
-                        />
-                        <div className="flex-1 space-y-1">
-                          <div className="flex items-center space-x-2">
-                            <h4 className="font-sans font-bold text-[#111111] text-sm">
-                              {laptop.name}
-                            </h4>
-                            {existingTestimonial && (
-                              <span className="font-mono text-[9px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 border border-emerald-300 flex items-center space-x-1">
-                                <CheckCircle className="h-3 w-3 text-emerald-600" />
-                                <span>Published on Homepage</span>
-                              </span>
-                            )}
+                {/* Grid of Live Homepage Testimonials */}
+                <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-neutral-50/50">
+                  {liveTestimonials.map((t) => {
+                    const linkedSold = t.soldLaptopId ? soldLaptops.find(s => s.id === t.soldLaptopId) : null;
+                    return (
+                      <div key={t.id} className="bg-white border border-[#E5E5E5] p-4 flex flex-col justify-between space-y-4 shadow-xs hover:border-neutral-300 transition-all">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-1">
+                              {[...Array(t.rating || 5)].map((_, i) => (
+                                <Star key={i} className="h-3.5 w-3.5 fill-[#FF3B30] text-[#FF3B30]" />
+                              ))}
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              {t.submittedByCustomer && (
+                                <span className="font-mono text-[8px] bg-blue-50 text-blue-800 border border-blue-200 px-1.5 py-0.5">
+                                  Customer Review
+                                </span>
+                              )}
+                              {t.verifiedPurchase && (
+                                <span className="font-mono text-[9px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 flex items-center space-x-1">
+                                  <ShieldCheck className="h-3 w-3" />
+                                  <span>Verified Buyer</span>
+                                </span>
+                              )}
+                            </div>
                           </div>
 
-                          <p className="font-mono text-[9px] text-[#6B6B6B]">
-                            S/N: {laptop.serialNumber} • Buyer Name: <strong className="text-[#111111]">{laptop.buyerName || 'Verified Client'}</strong>
+                          <p className="font-sans text-xs italic text-[#222222] bg-neutral-50 p-2.5 border border-dashed border-[#E5E5E5] leading-relaxed">
+                            "{t.quote}"
                           </p>
+                        </div>
 
-                          {laptop.buyerFeedback ? (
-                            <p className="font-sans text-xs text-[#555555] italic mt-2 bg-neutral-50 p-3 border border-dashed border-[#D4D4D4] leading-relaxed relative">
-                              "{laptop.buyerFeedback}"
-                            </p>
-                          ) : (
-                            <span className="font-mono text-[9px] text-neutral-400 block mt-1">
-                              No feedback message recorded yet.
+                        <div className="pt-3 border-t border-[#F0F0F0] space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                              <img src={t.avatar} alt={t.name} className="w-8 h-8 rounded-full object-cover border border-[#E5E5E5] filter grayscale shrink-0" />
+                              <div className="min-w-0">
+                                <h4 className="font-display font-bold text-xs text-[#111111] truncate">{t.name}</h4>
+                                <p className="font-sans text-[10px] text-[#6B6B6B] truncate">{t.role}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center space-x-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleTestimonialLiveStatus(t)}
+                                className="p-1.5 text-neutral-500 hover:text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
+                                title="Take Offline (Hide from Homepage)"
+                              >
+                                <EyeOff className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditTestimonial(t)}
+                                className="p-1.5 text-neutral-600 hover:text-[#111111] hover:bg-neutral-100 transition-colors cursor-pointer"
+                                title="Edit Testimonial"
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteTestimonialClick(t.id)}
+                                className="p-1.5 text-neutral-400 hover:text-[#FF3B30] hover:bg-rose-50 transition-colors cursor-pointer"
+                                title="Delete Testimonial"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="font-mono text-[9px] text-[#FF3B30] uppercase tracking-wider flex items-center space-x-1">
+                            <Package className="h-3 w-3 shrink-0" />
+                            <span className="truncate">Bought: {t.laptopBought}</span>
+                          </div>
+
+                          {linkedSold && (
+                            <span className="font-mono text-[9px] text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 block truncate">
+                              Linked Sold Laptop: S/N {linkedSold.serialNumber}
                             </span>
                           )}
                         </div>
                       </div>
+                    );
+                  })}
 
-                      <div className="flex flex-col sm:flex-row md:flex-col items-start sm:items-center md:items-end justify-between gap-3 shrink-0">
-                        <div className="text-left md:text-right">
-                          <span className="font-mono text-[10px] text-[#FF3B30] uppercase font-bold tracking-wider block">
-                            {laptop.deliveredDate || 'DELIVERED'}
-                          </span>
-                          <span className="font-mono text-sm font-bold text-neutral-400 line-through mt-0.5 block">
-                            {formatNaira(laptop.price)}
-                          </span>
+                  {liveTestimonials.length === 0 && (
+                    <div className="col-span-full p-8 text-center text-[#6B6B6B] font-sans">
+                      <p className="font-bold text-sm text-neutral-700">No live testimonials published yet.</p>
+                      <p className="text-xs text-neutral-500 mt-1">Click "Add Homepage Testimonial" above or approve a review from the moderation queue.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 3. HIDDEN / OFFLINE ARCHIVED TESTIMONIALS (IF ANY) */}
+              {hiddenTestimonials.length > 0 && (
+                <div className="bg-white border border-[#E5E5E5] overflow-hidden shadow-2xs">
+                  <div className="p-4 border-b border-[#E5E5E5] bg-neutral-100 flex items-center justify-between">
+                    <div>
+                      <h3 className="font-display font-bold text-xs text-[#111111] flex items-center space-x-1.5">
+                        <EyeOff className="h-4 w-4 text-neutral-500" />
+                        <span>Hidden / Draft Testimonials ({hiddenTestimonials.length})</span>
+                      </h3>
+                      <p className="font-sans text-[11px] text-neutral-500">
+                        Saved in database but currently hidden from the public homepage.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 bg-neutral-50">
+                    {hiddenTestimonials.map((t) => (
+                      <div key={t.id} className="bg-white border border-neutral-300 p-3.5 flex flex-col justify-between space-y-3 opacity-80 hover:opacity-100 transition-opacity">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-[9px] bg-neutral-200 text-neutral-700 px-1.5 py-0.5 font-bold">
+                              OFFLINE
+                            </span>
+                            <div className="flex items-center space-x-0.5">
+                              {[...Array(t.rating || 5)].map((_, i) => (
+                                <Star key={i} className="h-3 w-3 fill-neutral-400 text-neutral-400" />
+                              ))}
+                            </div>
+                          </div>
+                          <p className="font-sans text-xs italic text-neutral-700 bg-neutral-50 p-2 border border-neutral-200">
+                            "{t.quote}"
+                          </p>
+                          <div className="font-sans text-xs font-bold text-[#111111]">{t.name} ({t.laptopBought})</div>
                         </div>
 
-                        <div className="flex items-center space-x-2">
+                        <div className="pt-2 border-t border-neutral-200 flex items-center justify-between">
                           <button
                             type="button"
-                            onClick={() => handleStartEditSoldLaptop(laptop)}
-                            className="bg-neutral-100 hover:bg-neutral-200 text-[#111111] font-sans text-xs font-bold px-3 py-1.5 transition-colors cursor-pointer flex items-center space-x-1 border border-[#E5E5E5]"
+                            onClick={() => handleDeleteTestimonialClick(t.id)}
+                            className="text-rose-600 hover:underline font-sans text-xs"
                           >
-                            <Edit3 className="h-3.5 w-3.5 text-neutral-600" />
-                            <span>Edit Review</span>
+                            Delete
                           </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleOpenAddTestimonial(laptop)}
-                            className="bg-[#111111] hover:bg-[#FF3B30] text-white font-sans text-xs font-bold px-3 py-1.5 transition-colors cursor-pointer flex items-center space-x-1"
-                          >
-                            <Star className="h-3.5 w-3.5 fill-current text-amber-400" />
-                            <span>{existingTestimonial ? 'Update Testimonial' : '+ Publish as Testimonial'}</span>
-                          </button>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditTestimonial(t)}
+                              className="text-neutral-700 hover:underline font-sans text-xs"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleTestimonialLiveStatus(t)}
+                              className="bg-[#111111] hover:bg-[#FF3B30] text-white px-2.5 py-1 font-sans text-xs font-bold transition-colors cursor-pointer"
+                            >
+                              Publish Live
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-
-                {soldLaptops.length === 0 && (
-                  <div className="p-8 text-center text-[#6B6B6B] font-sans">
-                    No sold archive found.
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
+
+              {/* 4. ARCHIVED SALES & CLIENT REVIEWS */}
+              <div className="bg-white border border-[#E5E5E5] overflow-hidden shadow-2xs">
+                <div className="p-5 border-b border-[#E5E5E5] bg-[#FAF9F9]">
+                  <h2 className="font-display font-bold text-sm text-[#111111]">
+                    Archived Sales & Client Reviews ({soldLaptops.length})
+                  </h2>
+                  <p className="font-sans text-xs text-[#6B6B6B] mt-1">
+                    Completed sales archive. Update buyer review details or publish any sold unit directly as a homepage testimonial.
+                  </p>
+                </div>
+
+                <div className="divide-y divide-[#E5E5E5]">
+                  {soldLaptops.map((laptop) => {
+                    const existingTestimonial = testimonials.find(
+                      t => t.soldLaptopId === laptop.id || (t.laptopBought && t.laptopBought.toLowerCase().trim() === laptop.name.toLowerCase().trim())
+                    );
+
+                    return (
+                      <div key={laptop.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-neutral-50/50 transition-colors">
+                        <div className="flex items-start space-x-4 flex-1">
+                          <img 
+                            src={laptop.image} 
+                            alt={laptop.name} 
+                            className="w-16 h-12 object-cover border border-[#E5E5E5] flex-shrink-0 filter grayscale"
+                          />
+                          <div className="flex-1 space-y-1">
+                            <div className="flex items-center space-x-2">
+                              <h4 className="font-sans font-bold text-[#111111] text-sm">
+                                {laptop.name}
+                              </h4>
+                              {existingTestimonial && (
+                                <span className="font-mono text-[9px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 border border-emerald-300 flex items-center space-x-1">
+                                  <CheckCircle className="h-3 w-3 text-emerald-600" />
+                                  <span>Published on Homepage</span>
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="font-mono text-[9px] text-[#6B6B6B]">
+                              S/N: {laptop.serialNumber} • Buyer Name: <strong className="text-[#111111]">{laptop.buyerName || 'Verified Client'}</strong>
+                            </p>
+
+                            {laptop.buyerFeedback ? (
+                              <p className="font-sans text-xs text-[#555555] italic mt-2 bg-neutral-50 p-3 border border-dashed border-[#D4D4D4] leading-relaxed relative">
+                                "{laptop.buyerFeedback}"
+                              </p>
+                            ) : (
+                              <span className="font-mono text-[9px] text-neutral-400 block mt-1">
+                                No feedback message recorded yet.
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row md:flex-col items-start sm:items-center md:items-end justify-between gap-3 shrink-0">
+                          <div className="text-left md:text-right">
+                            <span className="font-mono text-[10px] text-[#FF3B30] uppercase font-bold tracking-wider block">
+                              {laptop.deliveredDate || 'DELIVERED'}
+                            </span>
+                            <span className="font-mono text-sm font-bold text-neutral-400 line-through mt-0.5 block">
+                              {formatNaira(laptop.price)}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditSoldLaptop(laptop)}
+                              className="bg-neutral-100 hover:bg-neutral-200 text-[#111111] font-sans text-xs font-bold px-3 py-1.5 transition-colors cursor-pointer flex items-center space-x-1 border border-[#E5E5E5]"
+                            >
+                              <Edit3 className="h-3.5 w-3.5 text-neutral-600" />
+                              <span>Edit Review</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleOpenAddTestimonial(laptop)}
+                              className="bg-[#111111] hover:bg-[#FF3B30] text-white font-sans text-xs font-bold px-3 py-1.5 transition-colors cursor-pointer flex items-center space-x-1"
+                            >
+                              <Star className="h-3.5 w-3.5 fill-current text-amber-400" />
+                              <span>{existingTestimonial ? 'Update Testimonial' : '+ Publish as Testimonial'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {soldLaptops.length === 0 && (
+                    <div className="p-8 text-center text-[#6B6B6B] font-sans">
+                      No sold archive found.
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* TAB 4: Physical Inspection 24h Reservations */}
         {activeTab === 'reservations' && (
@@ -2490,6 +2924,755 @@ export default function AdminPanel({
             </div>
           </div>
         )}
+
+        {/* TAB 5: Link Views Logged by Days (Analytics) */}
+        {activeTab === 'daily-views' && (() => {
+          // Collect all recorded date strings
+          const allRecordedDatesSet = new Set<string>();
+          allRecordedDatesSet.add(todayDateStr);
+          allRecordedDatesSet.add(yesterdayDateStr);
+          last7DaysArr.forEach(d => allRecordedDatesSet.add(d));
+
+          dailyViewsData.forEach(d => {
+            if (d.date) allRecordedDatesSet.add(d.date);
+            if (d.id && /^\d{4}-\d{2}-\d{2}$/.test(d.id)) allRecordedDatesSet.add(d.id);
+          });
+
+          allInventoryAndSold.forEach(l => {
+            if (l.dailyViews) {
+              Object.keys(l.dailyViews).forEach(d => {
+                if (/^\d{4}-\d{2}-\d{2}$/.test(d)) allRecordedDatesSet.add(d);
+              });
+            }
+          });
+
+          const sortedAllDates = Array.from(allRecordedDatesSet).sort((a, b) => b.localeCompare(a));
+
+          let filteredDatesList: string[] = [];
+          if (selectedDateRange === 'today') {
+            filteredDatesList = [todayDateStr];
+          } else if (selectedDateRange === 'yesterday') {
+            filteredDatesList = [yesterdayDateStr];
+          } else if (selectedDateRange === '7days') {
+            filteredDatesList = last7DaysArr;
+          } else if (selectedDateRange === '14days') {
+            filteredDatesList = last14DaysArr;
+          } else if (selectedDateRange === '30days') {
+            filteredDatesList = last30DaysArr;
+          } else if (selectedDateRange === 'custom') {
+            filteredDatesList = customDateFilter ? [customDateFilter] : [todayDateStr];
+          } else {
+            filteredDatesList = sortedAllDates;
+          }
+
+          // 14 days chart data calculation
+          const chart14Days = last14DaysArr.slice().reverse().map(dateStr => {
+            const dayViews = allInventoryAndSold.reduce((sum, l) => sum + getLaptopViewsOnDate(l, dateStr), 0);
+            const parts = dateStr.split('-');
+            const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            const label = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const isToday = dateStr === todayDateStr;
+            return { dateStr, label, dayViews, isToday };
+          });
+
+          const maxChartViews = Math.max(...chart14Days.map(c => c.dayViews), 4);
+
+          // Format friendly date string
+          const formatFriendlyDate = (dateStr: string) => {
+            try {
+              const parts = dateStr.split('-');
+              if (parts.length === 3) {
+                const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                const weekday = d.toLocaleDateString('en-US', { weekday: 'long' });
+                const full = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                return { weekday, full };
+              }
+            } catch (e) {}
+            return { weekday: '', full: dateStr };
+          };
+
+          // Filter laptops for the Performance Matrix table
+          const matrixLaptops = allInventoryAndSold.filter(l => {
+            if (!analyticsSearch.trim()) return true;
+            const q = analyticsSearch.toLowerCase();
+            return (
+              l.name.toLowerCase().includes(q) ||
+              l.brand.toLowerCase().includes(q) ||
+              (l.serialNumber && l.serialNumber.toLowerCase().includes(q))
+            );
+          });
+
+          return (
+            <div className="space-y-6">
+              {/* Analytics Top Control Header */}
+              <div className="bg-white border border-[#E5E5E5] p-5 shadow-xs">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <h2 className="font-display font-extrabold text-base text-[#111111] flex items-center space-x-2">
+                        <TrendingUp className="h-5 w-5 text-[#FF3B30]" />
+                        <span>Link Views Logged by Days</span>
+                      </h2>
+                      <span className="font-mono text-[9px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 border border-emerald-300 flex items-center space-x-1">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span>LIVE DAY COUNTER ACTIVE</span>
+                      </span>
+                    </div>
+                    <p className="font-sans text-xs text-[#6B6B6B] mt-1">
+                      Tracks visitor engagement, direct share links, and storefront modal openings per individual day and all-time.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = window.location.origin;
+                        navigator.clipboard.writeText(url);
+                        triggerNotification(`Copied Storefront Home Link: ${url}`);
+                      }}
+                      className="bg-neutral-100 hover:bg-neutral-200 text-[#111111] border border-[#D4D4D4] px-3 py-2 font-sans text-xs font-bold flex items-center space-x-1.5 cursor-pointer transition-colors"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      <span>Copy Store Link</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (laptops.length > 0) {
+                          handleCopyDirectLink(laptops[0].id);
+                        }
+                      }}
+                      className="bg-[#111111] hover:bg-[#FF3B30] text-white px-3.5 py-2 font-sans text-xs font-bold flex items-center space-x-1.5 cursor-pointer transition-colors shadow-2xs"
+                    >
+                      <Link2 className="h-3.5 w-3.5" />
+                      <span>Copy Sample Direct Link</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 5 High-Impact Metric Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-5 pt-5 border-t border-[#E5E5E5]">
+                  <div className="bg-emerald-50/60 border border-emerald-300 p-3 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[9px] text-emerald-800 font-bold uppercase tracking-wider">Today (Present Day)</span>
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    </div>
+                    <span className="font-display font-black text-2xl text-emerald-950 mt-1 block">
+                      {todayTotalViews}
+                    </span>
+                    <span className="font-sans text-[10px] text-emerald-700 font-medium block mt-0.5">
+                      Views logged today
+                    </span>
+                  </div>
+
+                  <div className="bg-white border border-[#E5E5E5] p-3 shadow-2xs">
+                    <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Yesterday</span>
+                    <span className="font-display font-black text-2xl text-[#111111] mt-1 block">
+                      {yesterdayTotalViews}
+                    </span>
+                    <span className="font-sans text-[10px] text-neutral-500 block mt-0.5">
+                      {yesterdayDateStr}
+                    </span>
+                  </div>
+
+                  <div className="bg-white border border-[#E5E5E5] p-3 shadow-2xs">
+                    <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Past 7 Days</span>
+                    <span className="font-display font-black text-2xl text-[#111111] mt-1 block">
+                      {last7DaysTotalViews}
+                    </span>
+                    <span className="font-sans text-[10px] text-neutral-500 block mt-0.5">
+                      Weekly traffic total
+                    </span>
+                  </div>
+
+                  <div className="bg-white border border-[#E5E5E5] p-3 shadow-2xs">
+                    <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">Past 30 Days</span>
+                    <span className="font-display font-black text-2xl text-[#111111] mt-1 block">
+                      {last30DaysTotalViews}
+                    </span>
+                    <span className="font-sans text-[10px] text-neutral-500 block mt-0.5">
+                      Monthly traffic total
+                    </span>
+                  </div>
+
+                  <div className="bg-white border border-[#E5E5E5] p-3 shadow-2xs col-span-2 sm:col-span-1">
+                    <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-wider block">All-Time Views</span>
+                    <span className="font-display font-black text-2xl text-blue-600 mt-1 block flex items-center space-x-1">
+                      <span>{overallTotalViews}</span>
+                      <Eye className="h-4 w-4" />
+                    </span>
+                    <span className="font-sans text-[10px] text-blue-600 font-medium block mt-0.5">
+                      Total lifetime clicks
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 14-Day Visual Activity Bar Chart */}
+              <div className="bg-white border border-[#E5E5E5] p-5 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                  <div>
+                    <h3 className="font-display font-bold text-xs uppercase tracking-wider text-[#111111] flex items-center space-x-2">
+                      <BarChart3 className="h-4 w-4 text-[#FF3B30]" />
+                      <span>Past 14 Days Visual Activity Trajectory</span>
+                    </h3>
+                    <span className="font-sans text-[11px] text-[#6B6B6B]">
+                      Click any day column to filter and view the logged model views for that specific date.
+                    </span>
+                  </div>
+                  <span className="font-mono text-[10px] text-neutral-500 bg-neutral-100 px-2 py-1 border border-neutral-200">
+                    Max: {maxChartViews} views/day
+                  </span>
+                </div>
+
+                <div className="pt-6 pb-2">
+                  <div className="flex items-end justify-between gap-1.5 h-44 px-2 border-b border-[#E5E5E5]">
+                    {chart14Days.map((c) => {
+                      const heightPercent = Math.max(8, Math.round((c.dayViews / maxChartViews) * 100));
+                      const isSelected = (selectedDateRange === 'custom' && customDateFilter === c.dateStr) || 
+                                        (selectedDateRange === 'today' && c.isToday) ||
+                                        (selectedDateRange === 'yesterday' && c.dateStr === yesterdayDateStr);
+                      return (
+                        <div
+                          key={c.dateStr}
+                          onClick={() => {
+                            setSelectedDateRange('custom');
+                            setCustomDateFilter(c.dateStr);
+                          }}
+                          className={`flex-1 flex flex-col items-center h-full justify-end group cursor-pointer transition-all p-1 ${
+                            isSelected ? 'bg-neutral-100/70 rounded-none' : ''
+                          }`}
+                          title={`${c.label} (${c.dateStr}): ${c.dayViews} views`}
+                        >
+                          {/* Count Badge on Top */}
+                          <span className={`font-mono text-[10px] font-bold mb-1 transition-transform group-hover:-translate-y-0.5 ${
+                            c.isToday 
+                              ? 'text-emerald-700 font-extrabold' 
+                              : c.dayViews > 0 
+                                ? 'text-[#111111]' 
+                                : 'text-neutral-300'
+                          }`}>
+                            {c.dayViews}
+                          </span>
+
+                          {/* Bar Graphic */}
+                          <div className="w-full max-w-[32px] bg-neutral-100 h-full flex items-end">
+                            <div
+                              style={{ height: `${heightPercent}%` }}
+                              className={`w-full transition-all duration-300 ${
+                                c.isToday
+                                  ? 'bg-emerald-600 group-hover:bg-emerald-700'
+                                  : c.dayViews > 0
+                                    ? 'bg-[#111111] group-hover:bg-[#FF3B30]'
+                                    : 'bg-neutral-200 group-hover:bg-neutral-300'
+                              }`}
+                            />
+                          </div>
+
+                          {/* Date Label Below */}
+                          <div className="mt-2 text-center">
+                            <span className={`font-mono text-[9px] block whitespace-nowrap ${
+                              c.isToday ? 'text-emerald-700 font-bold' : 'text-neutral-500'
+                            }`}>
+                              {c.label}
+                            </span>
+                            {c.isToday && (
+                              <span className="font-mono text-[8px] text-emerald-600 font-black block uppercase tracking-tighter">
+                                TODAY
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Filtering and Search Toolbar */}
+              <div className="bg-white border border-[#E5E5E5] p-4 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+                {/* Date Range Preset Buttons */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="font-mono text-[10px] text-neutral-400 uppercase mr-1 flex items-center space-x-1">
+                    <Filter className="h-3 w-3" />
+                    <span>Filter:</span>
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedDateRange('today'); setCustomDateFilter(''); }}
+                    className={`px-3 py-1.5 font-sans text-xs font-bold transition-all cursor-pointer border ${
+                      selectedDateRange === 'today'
+                        ? 'bg-emerald-600 text-white border-emerald-700 shadow-2xs'
+                        : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-700 border-neutral-200'
+                    }`}
+                  >
+                    ● Today ({todayTotalViews})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedDateRange('yesterday'); setCustomDateFilter(''); }}
+                    className={`px-3 py-1.5 font-sans text-xs font-bold transition-all cursor-pointer border ${
+                      selectedDateRange === 'yesterday'
+                        ? 'bg-[#111111] text-white border-[#111111]'
+                        : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-700 border-neutral-200'
+                    }`}
+                  >
+                    Yesterday ({yesterdayTotalViews})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedDateRange('7days'); setCustomDateFilter(''); }}
+                    className={`px-3 py-1.5 font-sans text-xs font-bold transition-all cursor-pointer border ${
+                      selectedDateRange === '7days'
+                        ? 'bg-[#111111] text-white border-[#111111]'
+                        : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-700 border-neutral-200'
+                    }`}
+                  >
+                    Past 7 Days
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedDateRange('14days'); setCustomDateFilter(''); }}
+                    className={`px-3 py-1.5 font-sans text-xs font-bold transition-all cursor-pointer border ${
+                      selectedDateRange === '14days'
+                        ? 'bg-[#111111] text-white border-[#111111]'
+                        : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-700 border-neutral-200'
+                    }`}
+                  >
+                    Past 14 Days
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedDateRange('30days'); setCustomDateFilter(''); }}
+                    className={`px-3 py-1.5 font-sans text-xs font-bold transition-all cursor-pointer border ${
+                      selectedDateRange === '30days'
+                        ? 'bg-[#111111] text-white border-[#111111]'
+                        : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-700 border-neutral-200'
+                    }`}
+                  >
+                    Past 30 Days
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedDateRange('all'); setCustomDateFilter(''); }}
+                    className={`px-3 py-1.5 font-sans text-xs font-bold transition-all cursor-pointer border ${
+                      selectedDateRange === 'all'
+                        ? 'bg-[#111111] text-white border-[#111111]'
+                        : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-700 border-neutral-200'
+                    }`}
+                  >
+                    All Recorded Days
+                  </button>
+                </div>
+
+                {/* Custom Date Input & Search */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center space-x-1.5 bg-neutral-50 border border-neutral-200 px-2 py-1">
+                    <Calendar className="h-3.5 w-3.5 text-neutral-400" />
+                    <input
+                      type="date"
+                      value={customDateFilter}
+                      onChange={(e) => {
+                        setCustomDateFilter(e.target.value);
+                        if (e.target.value) setSelectedDateRange('custom');
+                      }}
+                      className="bg-transparent text-xs font-mono font-medium text-neutral-800 outline-hidden cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-1.5 bg-white border border-[#E5E5E5] px-2.5 py-1.5 flex-1 sm:w-60">
+                    <input
+                      type="text"
+                      placeholder="Search laptop name, brand, S/N..."
+                      value={analyticsSearch}
+                      onChange={(e) => setAnalyticsSearch(e.target.value)}
+                      className="w-full text-xs font-sans text-[#111111] placeholder:text-neutral-400 outline-hidden"
+                    />
+                    {analyticsSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setAnalyticsSearch('')}
+                        className="text-neutral-400 hover:text-[#111111]"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {(customDateFilter || selectedDateRange !== '7days' || analyticsSearch) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDateRange('7days');
+                        setCustomDateFilter('');
+                        setAnalyticsSearch('');
+                      }}
+                      className="text-xs font-sans text-[#FF3B30] hover:underline font-bold px-2 py-1 cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Logged Daily Views Activity Breakdown */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display font-black text-sm uppercase tracking-wider text-[#111111] flex items-center space-x-2">
+                    <Activity className="h-4 w-4 text-[#FF3B30]" />
+                    <span>Daily Logs Breakdown ({filteredDatesList.length} Days Displayed)</span>
+                  </h3>
+                  <span className="font-mono text-[10px] text-neutral-500 font-medium">
+                    Showing views aggregated by calendar day
+                  </span>
+                </div>
+
+                <div className="space-y-4">
+                  {filteredDatesList.map((dateStr) => {
+                    const isToday = dateStr === todayDateStr;
+                    const isYesterday = dateStr === yesterdayDateStr;
+                    const dateInfo = formatFriendlyDate(dateStr);
+                    const dayTotalViews = allInventoryAndSold.reduce((acc, l) => acc + getLaptopViewsOnDate(l, dateStr), 0);
+
+                    // Get list of laptops viewed on this day
+                    const viewedLaptopsOnDay = allInventoryAndSold
+                      .map(l => ({
+                        laptop: l,
+                        viewsOnDay: getLaptopViewsOnDate(l, dateStr)
+                      }))
+                      .filter(item => {
+                        if (item.viewsOnDay <= 0) return false;
+                        if (!analyticsSearch.trim()) return true;
+                        const q = analyticsSearch.toLowerCase();
+                        return (
+                          item.laptop.name.toLowerCase().includes(q) ||
+                          item.laptop.brand.toLowerCase().includes(q) ||
+                          (item.laptop.serialNumber && item.laptop.serialNumber.toLowerCase().includes(q))
+                        );
+                      })
+                      .sort((a, b) => b.viewsOnDay - a.viewsOnDay);
+
+                    // If not today and 0 views recorded, and filtering for 'all', we can skip empty historic days
+                    if (!isToday && dayTotalViews === 0 && selectedDateRange === 'all') {
+                      return null;
+                    }
+
+                    return (
+                      <div
+                        key={dateStr}
+                        className={`bg-white border transition-all ${
+                          isToday
+                            ? 'border-emerald-300 shadow-sm'
+                            : 'border-[#E5E5E5] shadow-xs'
+                        }`}
+                      >
+                        {/* Day Card Header */}
+                        <div className={`p-4 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 ${
+                          isToday
+                            ? 'bg-emerald-50/50 border-emerald-200'
+                            : 'bg-neutral-50/80 border-[#E5E5E5]'
+                        }`}>
+                          <div className="flex items-center space-x-2.5">
+                            <div className={`p-2 ${isToday ? 'bg-emerald-600 text-white' : 'bg-[#111111] text-white'}`}>
+                              <Calendar className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <div className="flex items-center space-x-2">
+                                <h4 className="font-display font-extrabold text-sm text-[#111111]">
+                                  {dateInfo.weekday}, {dateInfo.full}
+                                </h4>
+                                {isToday && (
+                                  <span className="font-mono text-[9px] bg-emerald-600 text-white font-black px-2 py-0.5 uppercase tracking-wider flex items-center space-x-1">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                                    <span>PRESENT DAY</span>
+                                  </span>
+                                )}
+                                {isYesterday && (
+                                  <span className="font-mono text-[9px] bg-neutral-200 text-neutral-800 font-bold px-1.5 py-0.5 uppercase">
+                                    Yesterday
+                                  </span>
+                                )}
+                              </div>
+                              <span className="font-mono text-[10px] text-neutral-500 block mt-0.5">
+                                Date Key: <code className="text-neutral-700 font-bold">{dateStr}</code>
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-3 self-end sm:self-center">
+                            <div className="text-right">
+                              <span className="font-mono text-[10px] text-neutral-400 uppercase block">Total Day Views</span>
+                              <div className="flex items-center space-x-1.5 justify-end">
+                                <span className={`font-display font-black text-lg ${isToday ? 'text-emerald-800' : 'text-[#111111]'}`}>
+                                  {dayTotalViews}
+                                </span>
+                                <Eye className={`h-3.5 w-3.5 ${isToday ? 'text-emerald-600' : 'text-blue-600'}`} />
+                              </div>
+                            </div>
+
+                            <span className="h-6 w-px bg-neutral-200 hidden sm:block" />
+
+                            <div className="text-right">
+                              <span className="font-mono text-[10px] text-neutral-400 uppercase block">Models Viewed</span>
+                              <span className="font-display font-bold text-sm text-neutral-700 block">
+                                {viewedLaptopsOnDay.length} units
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Day's Models Breakdown List */}
+                        <div className="p-4">
+                          {viewedLaptopsOnDay.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {viewedLaptopsOnDay.map(({ laptop, viewsOnDay }) => {
+                                const dayTrafficShare = dayTotalViews > 0 ? Math.round((viewsOnDay / dayTotalViews) * 100) : 0;
+                                return (
+                                  <div
+                                    key={laptop.id}
+                                    className="border border-[#E5E5E5] p-3 hover:border-neutral-400 transition-colors flex items-start justify-between gap-3 bg-white"
+                                  >
+                                    <div className="flex items-start space-x-3">
+                                      <img
+                                        src={laptop.image}
+                                        alt={laptop.name}
+                                        className="w-14 h-11 object-cover border border-[#E5E5E5] flex-shrink-0"
+                                      />
+                                      <div className="min-w-0">
+                                        <h5 className="font-display font-bold text-xs text-[#111111] truncate max-w-[180px] sm:max-w-[240px]">
+                                          {laptop.name}
+                                        </h5>
+                                        <div className="flex items-center space-x-2 text-[10px] font-mono text-neutral-500 mt-0.5">
+                                          <span>S/N: {laptop.serialNumber || 'N/A'}</span>
+                                          <span>•</span>
+                                          <span className="text-emerald-700 font-bold">{formatNaira(laptop.price)}</span>
+                                        </div>
+                                        
+                                        {/* Traffic Share Bar */}
+                                        <div className="flex items-center space-x-2 mt-2">
+                                          <div className="w-20 bg-neutral-100 h-1.5 overflow-hidden">
+                                            <div
+                                              style={{ width: `${dayTrafficShare}%` }}
+                                              className={`h-full ${isToday ? 'bg-emerald-600' : 'bg-[#FF3B30]'}`}
+                                            />
+                                          </div>
+                                          <span className="font-mono text-[9px] text-neutral-400">
+                                            {dayTrafficShare}% of day's views
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex flex-col items-end justify-between self-stretch flex-shrink-0">
+                                      <div className="flex items-center space-x-1 bg-neutral-50 border border-neutral-200 px-2 py-0.5">
+                                        <Eye className="h-3 w-3 text-blue-600" />
+                                        <span className="font-mono font-bold text-xs text-[#111111]">{viewsOnDay}</span>
+                                        <span className="font-sans text-[9px] text-neutral-400">views</span>
+                                      </div>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopyDirectLink(laptop.id)}
+                                        className="text-[10px] text-blue-600 hover:text-blue-800 font-medium flex items-center space-x-1 hover:underline cursor-pointer mt-2"
+                                        title="Copy direct link for this laptop"
+                                      >
+                                        {copiedLinkLaptopId === laptop.id ? (
+                                          <>
+                                            <Check className="h-3 w-3 text-emerald-600" />
+                                            <span className="text-emerald-600 font-bold">Copied</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Link2 className="h-3 w-3" />
+                                            <span>Copy Link</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="py-6 text-center text-neutral-500 font-sans text-xs">
+                              {isToday ? (
+                                <div className="space-y-1.5">
+                                  <p className="font-bold text-neutral-700">No link views logged yet for today ({todayDateStr}).</p>
+                                  <p className="text-[11px] text-neutral-500">
+                                    When buyers open your laptop listings or click direct share links today, their visits will appear here instantly.
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (laptops.length > 0) handleCopyDirectLink(laptops[0].id);
+                                    }}
+                                    className="inline-flex items-center space-x-1.5 text-xs text-blue-600 hover:underline font-bold pt-1 cursor-pointer"
+                                  >
+                                    <Link2 className="h-3.5 w-3.5" />
+                                    <span>Copy a direct laptop link to share and test tracking</span>
+                                  </button>
+                                </div>
+                              ) : (
+                                <p>No model views recorded for {dateInfo.full}.</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Comprehensive All-Laptops Performance Matrix */}
+              <div className="bg-white border border-[#E5E5E5] overflow-hidden shadow-xs mt-8">
+                <div className="p-5 border-b border-[#E5E5E5] bg-[#FAF9F9] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                  <div>
+                    <h3 className="font-display font-bold text-sm text-[#111111] flex items-center space-x-2">
+                      <Layers className="h-4 w-4 text-[#FF3B30]" />
+                      <span>All-Inventory View Counter Matrix</span>
+                    </h3>
+                    <p className="font-sans text-xs text-[#6B6B6B] mt-0.5">
+                      Compare today's present view count alongside historic windows for all active and archived catalog units.
+                    </p>
+                  </div>
+
+                  <span className="font-mono text-[10px] bg-neutral-100 text-neutral-700 px-2.5 py-1 border border-neutral-200 font-bold">
+                    {matrixLaptops.length} UNITS
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left font-sans text-xs">
+                    <thead className="bg-[#FAF9F9] border-b border-[#E5E5E5] font-mono text-[10px] text-neutral-400 uppercase tracking-wider">
+                      <tr>
+                        <th className="p-4 font-bold">Laptop Unit</th>
+                        <th className="p-4 font-bold">Catalog Price</th>
+                        <th className="p-4 font-bold bg-emerald-50 text-emerald-800 border-x border-emerald-200">
+                          Today ({todayDateStr.substring(5)})
+                        </th>
+                        <th className="p-4 font-bold">Yesterday</th>
+                        <th className="p-4 font-bold">Past 7 Days</th>
+                        <th className="p-4 font-bold">Past 30 Days</th>
+                        <th className="p-4 font-bold">All-Time Total</th>
+                        <th className="p-4 font-bold text-right">Share Direct Link</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E5E5E5]">
+                      {matrixLaptops.map((laptop) => {
+                        const todayViews = getLaptopTodayViews(laptop);
+                        const yestViews = getLaptopViewsOnDate(laptop, yesterdayDateStr);
+                        const sevenDayViews = last7DaysArr.reduce((s, d) => s + getLaptopViewsOnDate(laptop, d), 0);
+                        const thirtyDayViews = last30DaysArr.reduce((s, d) => s + getLaptopViewsOnDate(laptop, d), 0);
+                        const allTimeViews = laptop.viewCount || 0;
+
+                        return (
+                          <tr key={laptop.id} className="hover:bg-neutral-50/70 transition-colors">
+                            <td className="p-4">
+                              <div className="flex items-center space-x-3">
+                                <img
+                                  src={laptop.image}
+                                  alt={laptop.name}
+                                  className="w-10 h-8 object-cover border border-[#E5E5E5] flex-shrink-0"
+                                />
+                                <div>
+                                  <span className="font-bold text-[#111111] block">
+                                    {laptop.name}
+                                  </span>
+                                  <span className="font-mono text-[9px] text-[#6B6B6B] block">
+                                    S/N: {laptop.serialNumber || 'N/A'} • {laptop.brand}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td className="p-4 font-mono font-bold text-[#111111]">
+                              {formatNaira(laptop.price)}
+                            </td>
+
+                            {/* Today's Views Cell */}
+                            <td className="p-4 bg-emerald-50/40 border-x border-emerald-200">
+                              <div className="flex items-center space-x-1.5">
+                                <span className={`px-2 py-0.5 font-mono text-xs font-bold flex items-center space-x-1 border ${
+                                  todayViews > 0
+                                    ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                                    : 'bg-neutral-100 text-neutral-400 border-neutral-200'
+                                }`}>
+                                  <span className={`h-1.5 w-1.5 rounded-full ${todayViews > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-300'}`} />
+                                  <span>{todayViews}</span>
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Yesterday Cell */}
+                            <td className="p-4 font-mono text-xs text-neutral-700">
+                              {yestViews}
+                            </td>
+
+                            {/* 7 Days Cell */}
+                            <td className="p-4 font-mono text-xs text-neutral-800 font-medium">
+                              {sevenDayViews}
+                            </td>
+
+                            {/* 30 Days Cell */}
+                            <td className="p-4 font-mono text-xs text-neutral-800">
+                              {thirtyDayViews}
+                            </td>
+
+                            {/* All Time Total */}
+                            <td className="p-4 font-mono text-xs font-bold text-blue-700">
+                              <div className="flex items-center space-x-1">
+                                <Eye className="h-3 w-3" />
+                                <span>{allTimeViews}</span>
+                              </div>
+                            </td>
+
+                            {/* Share Link Action */}
+                            <td className="p-4 text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleCopyDirectLink(laptop.id)}
+                                className="inline-flex items-center space-x-1 bg-neutral-100 hover:bg-[#111111] hover:text-white text-[#111111] border border-neutral-300 px-2.5 py-1 text-[11px] font-sans font-bold transition-colors cursor-pointer"
+                              >
+                                {copiedLinkLaptopId === laptop.id ? (
+                                  <>
+                                    <Check className="h-3 w-3 text-emerald-400" />
+                                    <span>Copied!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Link2 className="h-3 w-3" />
+                                    <span>Copy Link</span>
+                                  </>
+                                )}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+
+                      {matrixLaptops.length === 0 && (
+                        <tr>
+                          <td colSpan={8} className="p-8 text-center text-neutral-500">
+                            No matching laptops found for query "{analyticsSearch}".
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* EDIT LAPTOP FULL BLEED VIEW */}
         {editingLaptop && (
@@ -2915,10 +4098,10 @@ export default function AdminPanel({
               <div>
                 <h3 className="font-display font-bold text-lg text-[#111111] flex items-center space-x-2">
                   <Star className="h-5 w-5 text-[#FF3B30] fill-[#FF3B30]" />
-                  <span>{editingTestimonialId ? 'Edit Homepage Testimonial' : 'Add Homepage Testimonial'}</span>
+                  <span>{editingTestimonialId ? 'Edit & Moderate Testimonial' : 'Add Testimonial'}</span>
                 </h3>
                 <p className="font-sans text-xs text-[#6B6B6B] mt-0.5">
-                  This review will appear live on the homepage Customer Stories section.
+                  Manage testimonial details and control whether it is published live to the homepage.
                 </p>
               </div>
 
@@ -2931,7 +4114,44 @@ export default function AdminPanel({
               </button>
             </div>
 
+            {testiSubmittedByCustomer && (
+              <div className="p-3 bg-blue-50 border border-blue-200 flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span className="bg-blue-600 text-white font-mono text-[9px] font-bold px-2 py-0.5 uppercase">
+                    Customer Submitted
+                  </span>
+                  <span className="font-sans text-xs text-blue-900 font-medium">
+                    This review was submitted directly by a buyer from the storefront.
+                  </span>
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleSaveTestimonialSubmit} className="space-y-5">
+              {/* Publication Status Controls */}
+              <div className="p-4 bg-neutral-50 border border-neutral-200 space-y-3">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div className="space-y-0.5">
+                    <span className="font-sans text-xs font-bold text-[#111111] block">
+                      Live on Homepage
+                    </span>
+                    <span className="font-sans text-[11px] text-neutral-500 block">
+                      When enabled, this review is immediately visible in the Customer Stories section on the storefront.
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={testiIsLive}
+                    onChange={(e) => {
+                      setTestiIsLive(e.target.checked);
+                      if (e.target.checked) setTestiStatus('approved');
+                      else setTestiStatus('hidden');
+                    }}
+                    className="accent-[#FF3B30] h-5 w-5 cursor-pointer ml-4"
+                  />
+                </label>
+              </div>
+
               {/* Connect to Sold Laptop Selector */}
               <div>
                 <label className="block font-sans text-xs font-bold text-[#111111] mb-1.5">
@@ -3061,6 +4281,34 @@ export default function AdminPanel({
                 />
               </div>
 
+              {/* Private Customer Contact Information */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-neutral-200">
+                <div>
+                  <label className="block font-sans text-[11px] font-bold text-neutral-600 mb-1">
+                    Customer Phone / WhatsApp (Private to Admin)
+                  </label>
+                  <input
+                    type="text"
+                    value={testiCustomerPhone}
+                    onChange={(e) => setTestiCustomerPhone(e.target.value)}
+                    placeholder="e.g. 08012345678"
+                    className="w-full border border-[#E5E5E5] p-2 font-sans text-xs text-[#111111] focus:outline-none focus:border-[#FF3B30]"
+                  />
+                </div>
+                <div>
+                  <label className="block font-sans text-[11px] font-bold text-neutral-600 mb-1">
+                    Customer Email (Private to Admin)
+                  </label>
+                  <input
+                    type="email"
+                    value={testiCustomerEmail}
+                    onChange={(e) => setTestiCustomerEmail(e.target.value)}
+                    placeholder="e.g. client@gmail.com"
+                    className="w-full border border-[#E5E5E5] p-2 font-sans text-xs text-[#111111] focus:outline-none focus:border-[#FF3B30]"
+                  />
+                </div>
+              </div>
+
               <div className="flex items-center justify-end space-x-3 pt-4 border-t border-[#E5E5E5]">
                 <button
                   type="button"
@@ -3074,7 +4322,11 @@ export default function AdminPanel({
                   className="px-6 py-2 bg-[#FF3B30] hover:bg-[#D32F2F] text-white font-sans text-xs font-bold cursor-pointer transition-colors flex items-center space-x-1.5"
                 >
                   <Star className="h-4 w-4 fill-current" />
-                  <span>{editingTestimonialId ? 'Save & Update Testimonial' : 'Publish to Homepage'}</span>
+                  <span>
+                    {testiIsLive
+                      ? (editingTestimonialId ? 'Save & Update Live Testimonial' : 'Publish Live to Homepage')
+                      : 'Save in Archive (Draft / Offline)'}
+                  </span>
                 </button>
               </div>
             </form>

@@ -34,6 +34,7 @@ export interface Laptop {
   buyerName?: string;
   deliveredDate?: string;
   viewCount?: number;
+  dailyViews?: { [dateStr: string]: number }; // Keyed by YYYY-MM-DD
 }
 
 export interface Testimonial {
@@ -46,6 +47,12 @@ export interface Testimonial {
   verifiedPurchase: boolean;
   laptopBought: string;
   soldLaptopId?: string;
+  isLive?: boolean;
+  status?: 'pending' | 'approved' | 'hidden';
+  submittedByCustomer?: boolean;
+  createdAt?: number;
+  customerEmail?: string;
+  customerPhone?: string;
 }
 
 export type FilterBudget = 'all' | 'under-400' | '400-700' | '700-1000' | 'above-1000';
